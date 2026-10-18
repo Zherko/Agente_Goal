@@ -1,0 +1,8 @@
+# no ignorar .opencode (es el paquete)
+!.opencode/
+!.opencode/agents/
+!.opencode/skills/
+
+# lab local no va al repo
+lab-opencode/
+runs/

@@ -1,0 +1,6 @@
+{
+  "instructions": [".opencode/skills/goal/SKILL.md"],
+  "agents": {
+    "goal": ".opencode/agents/goal.md"
+  }
+}
