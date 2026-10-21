@@ -76,7 +76,7 @@ Repite hasta que TODOS los criterios de éxito pasen:
 4. Ejecuta (ediciones mínimas), verifica inmediatamente con el comando de `verificar` del step. No declares éxito por inspección. Aplica la **regla de tests** de abajo: sin tests el paso no se marca hecho.
 5. **Auto-compact check (Muse Spark 1.2):** tras marcar el bloque, si `tokens_ventana >=68%` → ejecuta auto-compact del punto 3 de FASE 1-auto (checkpoint + extractivo + reinyecta objective.lock.json). Si no hay trigger, sigue sin compactar. Anota en LOG `compact: skip/summarize (ventana X/128k, drift Y)`.
 
-6. Actualiza **en el mismo paso**: `PLAN.md` (estado ✅/❌), `LOG.md` (append `## Iteración N — Intentado/Resultado/Error exacto/Aprendizaje`), `CONTEXT.md` con plantilla fija (sobrescribe, FIFO: lo más viejo se expulsa primero, nunca narrativa libre):
+6. Actualiza **en el mismo paso**: `PLAN.md` (estado ✅/❌), `LOG.md` (append `## Iteración N — Intentado/Resultado/Error exacto/Aprendizaje`) + `LOG.jsonl` fidedigno (`logger/index.js:append` seq+prev_hash+hash, cap 200 con rotación a `archive/LOG-*.jsonl`, verify detecta gaps), `CONTEXT.md` con plantilla fija (sobrescribe, FIFO: lo más viejo se expulsa primero, nunca narrativa libre):
    ```
    ## Funciona (max 10 líneas)
    ## Falla (max 10 líneas)
@@ -100,7 +100,7 @@ Solo para TRIVIAL: ejecuta fix directo, verifica con comando/test, deja `LOG.md`
 - **L2 Propiedad/invariante (bloqueante <30s):** 1 propiedad con fast-check ≥100 casos (idempotencia, round-trip, orden) o 1 happy +1 borde +1 error por unidad. En web/UI: Playwright 1 happy +1 error visible con screenshot; si no aporta, 1 línea de por qué.
 - **L3 Mutación dirigida (condicional):** Stryker solo sobre archivos tocados por el goal, threshold 70% inicial (sube a 80% solo si FP<10% en 20 goals). Bloqueante si `complexity=high` o `risk=core`, informativo si `low`. Métrica `mutation_score` reportada siempre.
 - **Flaky gate:** 3 reruns con seed distinto; si `flaky_rate >5%` → quarantine, no cuenta como verde.
-- **Diagnóstico obligatorio:** todo fail escribe `/.opencode/goals/<slug>/diagnosis/<id>/{trace.json,diff.patch,snapshot}`. Sin artefacto el run es inválido. `LOG.md` debe citar `diagnosis/<id>` con causa.
+- **Diagnóstico obligatorio:** todo fail escribe `/.opencode/goals/<slug>/diagnosis/<id>/{trace.json,diff.patch,snapshot}` + entrada `LOG.jsonl` status `fail` con hash encadenado. Sin artefacto el run es inválido. `LOG.md` debe citar `diagnosis/<id>` con causa. Validador `logger/validator` cruza `LOG.jsonl` vs `PLAN.md` dependsOn para detectar orden roto (ver `logger/index.js:validateOrder`).
 - **Frontera borrable vs permanente:** probes en `lab/`, `research/probes/`, `tests/_probe_*/` (TTL 72h, excluidos CI). Invariante: `rm -rf lab/ research/probes/ tests/_probe_*/ ; npm test` sigue verde (`clean-lab.py` + `goal.isolation.test.ts`). Borrable deja línea en `LEDGER.md`.
 - **Done del step:** comando exacto + resultado + `hash` + `falsable:true` + `mutation_score` si L3 aplica.
 
