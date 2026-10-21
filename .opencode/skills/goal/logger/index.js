@@ -1,16 +1,16 @@
 const fs=require('fs'), path=require('path'), crypto=require('crypto');
 const LOG_DIR = 'C:/Users/user/Documents/Default Project/.opencode/goals';
-function hashEntry(e){ return crypto.createHash('sha256').update(JSON.stringify({seq:e.seq, ts:e.ts, slug:e.slug, step:e.step, status:e.status, prev_hash:e.prev_hash, msg:e.msg})).digest('hex').slice(0,16); }
+function hashEntry(e){ return crypto.createHash('sha256').update(JSON.stringify({seq:e.seq, ts:e.ts, slug:e.slug, step:e.step, status:e.status, prev_hash:e.prev_hash, msg:e.msg, karpathy_contract:e.karpathy_contract||null})).digest('hex').slice(0,16); }
 function logPath(slug){ return path.join(LOG_DIR, slug, 'LOG.jsonl'); }
 function archivePath(slug, seq){ return path.join(LOG_DIR, slug, `archive/LOG-${String(seq).padStart(4,'0')}.jsonl`); }
 
-function append(slug, {step, status, msg}){
+function append(slug, {step, status, msg, karpathy_contract=null}){
   const dir=path.join(LOG_DIR, slug); fs.mkdirSync(dir,{recursive:true}); fs.mkdirSync(path.join(dir,'archive'),{recursive:true});
   const p=logPath(slug);
   let lines=[]; if(fs.existsSync(p)) lines=fs.readFileSync(p,'utf8').split('\n').filter(Boolean);
   let prev_hash='0000000000000000'; let seq=1;
   if(lines.length){ const last=JSON.parse(lines[lines.length-1]); prev_hash=last.hash; seq=last.seq+1; }
-  const entry={seq, ts:new Date().toISOString(), slug, step, status, prev_hash, msg: msg||''};
+  const entry={seq, ts:new Date().toISOString(), slug, step, status, prev_hash, msg: msg||'', karpathy_contract};
   entry.hash=hashEntry(entry);
   const content=(lines.length? lines.join('\n')+'\n':'') + JSON.stringify(entry)+'\n';
   fs.writeFileSync(p, content);
