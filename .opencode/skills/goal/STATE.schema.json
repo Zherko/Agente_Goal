@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Goal STATE — autonomía validada (beat/advance/pause)",
+  "type": "object",
+  "required": ["slug", "status", "iter", "comites_totales", "comites_por_punto", "beat_ts", "watchdog_timeout_min", "hash_fase0"],
+  "properties": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]{2,32}$" },
+    "status": { "enum": ["running", "paused", "done", "blocked"] },
+    "iter": { "type": "integer", "minimum": 0, "maximum": 60 },
+    "comites_totales": { "type": "integer", "minimum": 0, "maximum": 60 },
+    "comites_por_punto": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 2 } },
+    "beat_ts": { "type": "string", "format": "date-time" },
+    "watchdog_timeout_min": { "type": "integer", "minimum": 5, "maximum": 60, "default": 20 },
+    "hash_fase0": { "type": "string" },
+    "last_ledger_line": { "type": "string" }
+  }
+}
