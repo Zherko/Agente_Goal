@@ -15,7 +15,8 @@
           "agent": { "type": "string" },
           "subtask": { "type": "string" },
           "files": { "type": "array", "items": { "type": "string" } },
-          "status": { "enum": ["active", "done"] }
+          "status": { "enum": ["active", "done"] },
+          "dependsOn": { "type": "array", "items": { "type": "string" }, "description": "subtasks previas requeridas; si cruzado → degrada secuencial (DAG)" }
         }
       }
     }

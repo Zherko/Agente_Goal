@@ -9,7 +9,7 @@ Orquestador de objetivos con plan seccional y runtime soberano. Disponible como 
 - **Lazy load obligatorio:** al iniciar SIEMPRE `read SKILL.md` completo antes de actuar. Prohibido decidir sin leerlo.
 - **Memoria en disco:** `.opencode/goals/<slug>/` + `INDEX.md` — no en chat; research hallable en 2 reads: `research/INDEX.md` → `research/YYYY-MM-DD_<slug>/NOTE.md`
 - **Plan aislado:** delega partición a agente `plan` nativo (`edit:deny`), nunca planifica escribiendo código
-- **Comité solo al atrancarse:** `SKILL.md:81` — max 2 por punto, 6 global, con deep research previo; research: deep research inicial + comité arranque opcional, luego early-stop 2 fallos
+- **Comité solo al atrancarse:** `SKILL.md:81` — max 2 por punto, 6 global, con deep research + Key Assumptions Check + 5 agentes paralelos + refutación cruzada + juez con criterios de reversión (alineado `/skill-comite`); research: deep research inicial + comité arranque opcional, luego early-stop 2 fallos
 
 ## Flujo resumido (detalle en SKILL.md + research/controller.md)
 1. FASE -1 grill me si ambiguo (puede proponer `research.enabled` si huele métrica) → 2. FASE 0 slug+clasifica+check-first por hash → 3. FASE 0b plan con `plan` (+ research harness si enabled) → 3b. FASE 1.R deep research inicial + comité arranque + loop hallable 2 reads (opt-in `--research`) → 4. FASE 1 runtime disyunción+dispatch+tests → 5. FASE 1b desbloqueo con comité si 2 fallos

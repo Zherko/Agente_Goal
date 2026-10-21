@@ -20,10 +20,10 @@ Solo paralelo si TODAS:
 
 Si solape → secuencial. Ledger en `block.json` (claims informativos, no lock).
 
-## Regla 2 — Agentes selectivos
+## Regla 2 — Agentes selectivos (planner-opt 2026-10-20 blindado)
 
 - 1 paso → directo
-- 3+ docs disjuntos → writer-batch 1 sesión (1 writer hace N archivos, -77% vs N workers)
+- 3+ docs disjuntos → writer-batch 1 sesión (1 writer hace N archivos, -77% vs N workers) — validado holdout-doc-batch 10605→5312 (-50%) con 3 reruns, harness_hash frozen
 - ≥2 pasos disjuntos + >10k tok → subagentes en paralelo con mensaje mínimo `lee X, escribe Y`
 - Nunca -pure overhead por <10k tok
 
