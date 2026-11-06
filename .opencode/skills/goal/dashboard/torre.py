@@ -217,6 +217,7 @@ def scan_campaign(path, cid, label):
         "roadmap": read(os.path.join(path, "ROADMAP.md")),
         "best": read(os.path.join(path, "BEST.md")),
         "versions": scan_versions(path),
+        "cycles": len([l for l in read(os.path.join(path, "cycles.jsonl")).splitlines() if l.strip()]),
         "wins": sum(1 for e in exps if e["verdict"] in ("success", "ok", "win", "mejora")),
         "fails": sum(1 for e in exps if e["verdict"] in ("fail", "lose")),
         "best_delta": best,
@@ -632,7 +633,7 @@ def view_research(data):
 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
   <b>{html.escape(c['label'])}</b><span class="pill large">research</span></div>
 <div class="sub" style="margin-top:6px">{len(c['experiments'])} pruebas · {c['wins']} con mejora</div>
-<div class="chips"><span class="chip">mejor {fmt_delta(c['best_delta'])}</span>
+<div class="chips"><span class="chip">{c['cycles']} ciclos</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span>
 <span class="chip">última {html.escape(c['updated'] or '—')}</span></div></a>"""
     body = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Investigaciones</h2>'
             f'<div class="psub">Cada prueba guarda su cuaderno completo</div></div></div>'
@@ -678,7 +679,7 @@ def view_run(data, cid):
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
   <h1 style="font-size:19px;margin:0">{html.escape(c['label'])}</h1>
   <span class="chip">{len(c['experiments'])} pruebas</span><span class="chip ok">{c['wins']} con mejora</span>
-  <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
+  <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">{c['cycles']} ciclos</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Progreso</h2>
   <div class="psub">Métrica por prueba, en orden</div></div></div><div class="pbody">{area_chart(pts, unit="")}</div></div>
 {roadmap}

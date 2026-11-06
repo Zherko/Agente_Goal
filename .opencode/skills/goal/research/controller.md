@@ -94,6 +94,18 @@ El aprendizaje no vive en el contexto del agente: vive en disco y se lee antes d
 - **Regla anti-bucle:** prohibido repetir una hipótesis de `Descartado` salvo que se explique qué supuesto cambió.
 - **Cierre:** si un goal termina sin mejora, `ROADMAP.md` deja las hipótesis vivas y el siguiente paso exacto para retomar.
 
+## Contabilidad de ciclos (anti-parada-prematura)
+
+El número no es una sugerencia: se cuenta en disco y manda.
+
+- **Qué es un ciclo:** hipótesis escrita + parche aplicado + harness ejecutado + `metric.json` + fila en `_index.md` + `LEARNINGS.md`/`ROADMAP.md` actualizados. Leer, pensar o tocar un archivo **no** es un ciclo.
+- **Registro:** `research/cycles.jsonl`, una línea por ciclo cerrado `{n, fecha, experimento, metric, delta, harness_hash}`. Es la única fuente para contar; si no hay línea, el ciclo no existe.
+- **Cuota mínima antes de parar:** `/goal-research` = 5 ciclos · `/goal-autoresearch` = **15 ciclos**. Presupuesto máximo 20.
+- **Parada legítima (solo tres):** objetivo alcanzado con réplica x2 · 10 comités seguidos · cuota agotada.
+- **Prohibido parar** por «creo que ya está», por tiempo, por tokens o por cansancio. Si el agente cree que debe parar antes, escribe `## PARADA PROPUESTA` con motivo en `NOTE.md` y **sigue igualmente**.
+- **Cierre:** con `ciclos < cuota` y sin objetivo, el estado es `bloqueado`, nunca `fin`.
+- **Tablero:** muestra `ciclos N/cuota` en la investigación.
+
 ## Memoria (canónica en proyecto, no en Goal)
 
 - **Detallada (CANÓNICA):** `research/_index.md` + `research/YYYY-MM-DD-{slug}/NOTEBOOK.md` + `metric.json` (append-only, nunca se borra, versionada en git). Mirror ` .opencode/goals/<slug>/research/INDEX.md` se mantiene por TTL dual-write.
@@ -110,7 +122,7 @@ El aprendizaje no vive en el contexto del agente: vive en disco y se lee antes d
 
 Solo si `research.deep=true` (flag `--autoresearch` o alias `/goal-autoresearch`). Sin flag no aplica: manda el loop normal (early_stop 3).
 
-- **Presupuesto:** `max_ciclos: 20`, techo de iteraciones del goal 30 (SKILL.md §Reglas de parada), **10 comités consecutivos**, nunca más de 60 globales.
+- **Presupuesto:** `max_ciclos: 20` y **cuota de 15 ciclos completos** antes de poder parar, techo de iteraciones del goal 30 (SKILL.md §Reglas de parada), **10 comités consecutivos**, nunca más de 60 globales.
 - **Disparo:** cada `consecutive_fails == 2` abre comité (formato FASE 1b) y **reinicia `consecutive_fails=0`** tras el veredicto; por eso pueden encadenarse hasta 10. Los comités 1-9 usan `skill({name:"goal-comite-internal"})`.
 - **Última oportunidad:** cuando `comites_consecutivos == 9`, el siguiente comité (el 10.º) se invoca con `skill({name:"goal-comite-pro-internal"})` — doble refutación — en vez del standard. Su veredicto es el último: si marca camino, se ejecuta y un fallo cierra; si no marca camino, cierra directo.
 - **Reinicio:** una mejora **replicada x2** (`delta` supera target + tests no mentirosos) pone `comites_consecutivos=0` y `consecutive_fails=0`. Sin réplica no reinicia.
