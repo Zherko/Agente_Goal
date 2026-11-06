@@ -157,6 +157,33 @@ def scan_experiment(path, name):
     }
 
 
+def scan_versions(path):
+    base = os.path.join(path, "versions")
+    out = []
+    if not os.path.isdir(base):
+        return out
+    for name in sorted(os.listdir(base)):
+        d = os.path.join(base, name)
+        if not os.path.isdir(d):
+            continue
+        meta = {}
+        mp = os.path.join(d, "meta.json")
+        if os.path.exists(mp):
+            try:
+                meta = json.loads(read(mp) or "{}")
+            except json.JSONDecodeError:
+                meta = {}
+        files = [f for f in os.listdir(d) if f != "meta.json" and not f.startswith(".")]
+        out.append({
+            "id": name, "dir": d, "files": files,
+            "delta": num(meta.get("delta")), "value": num(meta.get("metric_value", meta.get("result"))),
+            "date": str(meta.get("fecha") or meta.get("date") or mdate(name, d)),
+            "exp": str(meta.get("experimento") or meta.get("exp") or ""),
+        })
+    out.sort(key=lambda v: v["id"], reverse=True)
+    return out
+
+
 def scan_campaign(path, cid, label):
     exps, index_rows = [], {}
     idx = os.path.join(path, "_index.md")
@@ -169,7 +196,7 @@ def scan_campaign(path, cid, label):
     if os.path.isdir(path):
         for name in os.listdir(path):
             d = os.path.join(path, name)
-            if not os.path.isdir(d) or name.startswith("_") or name == "archive":
+            if not os.path.isdir(d) or name.startswith("_") or name in ("archive", "versions", "probes", "template"):
                 continue
             e = scan_experiment(d, name)
             key = next((k for k in index_rows if name.endswith(k)), None)
@@ -188,6 +215,7 @@ def scan_campaign(path, cid, label):
         "id": cid, "label": label, "path": path, "experiments": exps,
         "learnings": read(os.path.join(path, "LEARNINGS.md")),
         "best": read(os.path.join(path, "BEST.md")),
+        "versions": scan_versions(path),
         "wins": sum(1 for e in exps if e["verdict"] in ("success", "ok", "win", "mejora")),
         "fails": sum(1 for e in exps if e["verdict"] in ("fail", "lose")),
         "best_delta": best,
@@ -620,8 +648,21 @@ def view_run(data, cid):
         for e in reversed(c["experiments"])) or '<tr><td colspan="4" class="empty">Sin pruebas.</td></tr>'
     learn = md(c["learnings"]) if c["learnings"].strip() else '<div class="empty">Sin aprendizaje acumulado.</div>'
     best = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Mejor versión guardada</h2>'
-            f'<div class="psub">Apuntador a la mejor prueba conocida</div></div></div>'
+            f'<div class="psub">Apuntador a la mejor versión conocida</div></div></div>'
             f'<div class="pbody note">{md(c["best"])}</div></div>') if c["best"].strip() else ""
+    vers = ""
+    if c["versions"]:
+        vrows = "".join(
+            f'<tr><td><a href="/ver/{c["id"]}/{v["id"]}"><b>{html.escape(v["id"])}</b></a></td>'
+            f'<td style="color:var(--muted)">{html.escape(v["date"])}</td>'
+            f'<td>{html.escape(v["exp"]) or "—"}</td><td>{fmt_delta(v["delta"])}</td>'
+            f'<td style="color:var(--dim)">{html.escape(", ".join(v["files"]))[:70]}</td></tr>'
+            for v in c["versions"])
+        vers = ('<div class="panel"><div class="phead"><div><h2 class="ptitle">Versiones del sujeto</h2>'
+                '<div class="psub">Cada mejora deja copia exacta del archivo</div></div></div>'
+                '<div class="pbody" style="padding-top:0"><table><thead><tr><th>Versión</th><th>Fecha</th>'
+                f'<th>Experimento</th><th>Cambio</th><th>Archivos</th></tr></thead><tbody>{vrows}</tbody></table></div></div>')
+
     body = f"""
 <p class="sub" style="margin:0 0 12px"><a href="/research">← investigaciones</a></p>
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -630,6 +671,7 @@ def view_run(data, cid):
   <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Progreso</h2>
   <div class="psub">Métrica por prueba, en orden</div></div></div><div class="pbody">{area_chart(pts, unit="")}</div></div>
+{vers}
 {best}
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Pruebas</h2>
   <div class="psub">Pincha para abrir el cuaderno</div></div></div>
@@ -663,6 +705,30 @@ def view_exp(data, cid, eid):
     return shell(e["name"] + " · cuaderno", body, "r")
 
 
+def view_ver(data, cid, vid):
+    c = next((x for x in data["campaigns"] if x["id"] == cid), None)
+    v = next((x for x in c["versions"] if x["id"] == vid), None) if c else None
+    if not v:
+        return None
+    blocks = ""
+    for f in v["files"]:
+        body = read(os.path.join(v["dir"], f))
+        blocks += f"<h3>{html.escape(f)}</h3><pre>{html.escape(body)}</pre>"
+    chips = [f'<span class="chip">{html.escape(v["date"])}</span>']
+    if v["value"] is not None:
+        chips.append(f'<span class="chip">métrica {v["value"]:.3g}</span>')
+    if v["delta"] is not None:
+        chips.append(f'<span class="chip">cambio {fmt_delta(v["delta"])}</span>')
+    if v["exp"]:
+        chips.append(f'<span class="chip">{html.escape(v["exp"])}</span>')
+    body = f"""
+<p class="sub" style="margin:0 0 12px"><a href="/run/{c['id']}">← {html.escape(c['label'])}</a></p>
+<h1 style="font-size:19px;margin:0">{html.escape(v['id'])}</h1>
+<div class="chips">{''.join(chips)}</div>
+<div class="panel note" style="margin-top:16px"><div class="pbody">{blocks or '<div class="empty">Sin archivos.</div>'}</div></div>"""
+    return shell(v["id"] + " · versión", body, "r")
+
+
 # ---------- servidor ----------
 class Handler(BaseHTTPRequestHandler):
     root = "."
@@ -692,9 +758,11 @@ class Handler(BaseHTTPRequestHandler):
             page = view_run(data, parts[1])
         elif parts[0] == "exp" and len(parts) == 3:
             page = view_exp(data, parts[1], parts[2])
+        elif parts[0] == "ver" and len(parts) == 3:
+            page = view_ver(data, parts[1], parts[2])
         if page is None:
             return self.send("no encontrado", 404, "text/plain; charset=utf-8")
-        if not path.startswith("exp/"):
+        if not (path.startswith("exp/") or path.startswith("ver/")):
             page = page.replace("<head>", '<head><meta http-equiv="refresh" content="15">', 1)
         self.send(page)
 
