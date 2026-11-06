@@ -79,6 +79,21 @@ Lo que se investiga es un archivo concreto (el «sujeto»). Se versiona **el arc
 - **Git opcional:** además, `git tag goal/<slug>/vNNN` si el proyecto es repo. El tag no sustituye la copia.
 - **Tablero:** `VERSIONS.md` se muestra en la investigación con enlace al contenido de cada versión.
 
+## Conocimiento acumulativo (obligatorio en ambos modos)
+
+El aprendizaje no vive en el contexto del agente: vive en disco y se lee antes de cada hipótesis.
+
+- **`research/LEARNINGS.md`** — una entrada por prueba (máx. 3 líneas): qué se aprendió y qué descartar. Se lee (READ 2) **antes** de proponer la siguiente hipótesis, no después.
+- **`research/ROADMAP.md`** — la ruta, reescrita al cerrar cada ciclo y nunca borrada:
+  ```
+  ## Camino recorrido   (hipótesis probada → resultado en una línea, en orden)
+  ## Vivo               (hipótesis abiertas, con por qué)
+  ## Descartado         (hipótesis muerta + motivo)
+  ## Siguiente          (la próxima concreta, y la de después)
+  ```
+- **Regla anti-bucle:** prohibido repetir una hipótesis de `Descartado` salvo que se explique qué supuesto cambió.
+- **Cierre:** si un goal termina sin mejora, `ROADMAP.md` deja las hipótesis vivas y el siguiente paso exacto para retomar.
+
 ## Memoria (canónica en proyecto, no en Goal)
 
 - **Detallada (CANÓNICA):** `research/_index.md` + `research/YYYY-MM-DD-{slug}/NOTEBOOK.md` + `metric.json` (append-only, nunca se borra, versionada en git). Mirror ` .opencode/goals/<slug>/research/INDEX.md` se mantiene por TTL dual-write.

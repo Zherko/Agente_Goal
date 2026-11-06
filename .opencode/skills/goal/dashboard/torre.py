@@ -214,6 +214,7 @@ def scan_campaign(path, cid, label):
     return {
         "id": cid, "label": label, "path": path, "experiments": exps,
         "learnings": read(os.path.join(path, "LEARNINGS.md")),
+        "roadmap": read(os.path.join(path, "ROADMAP.md")),
         "best": read(os.path.join(path, "BEST.md")),
         "versions": scan_versions(path),
         "wins": sum(1 for e in exps if e["verdict"] in ("success", "ok", "win", "mejora")),
@@ -341,6 +342,12 @@ def md(text):
             if buf:
                 out.append("<ul>" + "".join(buf) + "</ul>" if buf[0].startswith("<li>") else "<p>" + "<br>".join(buf) + "</p>")
                 buf = []
+            continue
+        if s.startswith("## "):
+            if buf:
+                out.append("<ul>" + "".join(buf) + "</ul>" if buf[0].startswith("<li>") else "<p>" + "<br>".join(buf) + "</p>")
+                buf = []
+            out.append("<h3>" + inline(s[3:]) + "</h3>")
             continue
         if s.lstrip().startswith(("- ", "* ")):
             if buf and not buf[0].startswith("<li>"):
@@ -651,6 +658,9 @@ def view_run(data, cid):
             f'<div class="psub">Apuntador a la mejor versión conocida</div></div></div>'
             f'<div class="pbody note">{md(c["best"])}</div></div>') if c["best"].strip() else ""
     vers = ""
+    roadmap = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Ruta de investigación</h2>'
+               f'<div class="psub">Camino recorrido, vivo y descartado</div></div></div>'
+               f'<div class="pbody note">{md(c["roadmap"])}</div></div>') if c["roadmap"].strip() else ""
     if c["versions"]:
         vrows = "".join(
             f'<tr><td><a href="/ver/{c["id"]}/{v["id"]}"><b>{html.escape(v["id"])}</b></a></td>'
@@ -671,6 +681,7 @@ def view_run(data, cid):
   <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Progreso</h2>
   <div class="psub">Métrica por prueba, en orden</div></div></div><div class="pbody">{area_chart(pts, unit="")}</div></div>
+{roadmap}
 {vers}
 {best}
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Pruebas</h2>
