@@ -12,7 +12,7 @@ Objetivo: $ARGUMENTS
 
 Si el objetivo viene vacío, pide 1 sola pregunta aclaratoria y no avances.
 
-**Flags:** el **modo por defecto es completo** (`--full` implícito): plan seccional + iteración con comité cuando toca, sin vía rápida. `--fast` es la única forma de activar la clasificación y el atajo TRIVIAL; `--research` activa auto-research para bajar métrica (ver FASE 1.R). Alias `/goal-research` inyecta `--research`. Precedencia: `CLI flag > opencode.json goal.mode > full`. Sin flag → flujo completo.
+**Flags:** el **modo por defecto es completo** (`--full` implícito): plan seccional + iteración con comité cuando toca, sin vía rápida. `--fast` es la única forma de activar la clasificación y el atajo TRIVIAL; `--research` activa auto-research para bajar métrica (ver FASE 1.R). Alias `/goal-research` inyecta `--research`. `--autoresearch` (alias `/goal-autoresearch`) = research profundo: implica `--research` y activa `research/controller.md §Modo profundo` (cuaderno de 6 apartados + `LEARNINGS.md` + comité cada 2 fallos hasta 10 seguidos, contador a 0 al mejorar replicado). Precedencia: `CLI flag > opencode.json goal.mode > full`. Sin flag → flujo completo.
 
 ## FASE -1 — Grill me (solo si hace falta)
 
@@ -58,7 +58,7 @@ Usa el agente **`plan` nativo de opencode** (primary `plan`: analiza sin modific
 
 ## FASE 1.R — Auto-research opcional (determinista y acotado)
 
-Controlador externo: `research/controller.md` (no infla SKILL.md). Si `research.enabled=false`, esta fase no existe y coste 0. Si `true`: deep research inicial (3-7 bullets con fuente en `LOG.md ## RESEARCH-INIT`) → comité de arranque mínimo → loop 1.R max 5 ciclos en `.opencode/goals/<slug>/research/YYYY-MM-DD-{slug}/NOTE.md` con `research/INDEX.md` hallable en 2 reads (`INDEX.md` → `NOTE.md`). Cada ciclo = 1 iter del límite global de 15; early-stop si 2 fallos consecutivos (`consecutive_fails >=2`) → invoca FASE 1b (consume 1 de 60). Promoción a `steps/` solo con `delta` replicado x2 + tests no mentirosos. Detalle completo en `research/controller.md`.
+Controlador externo: `research/controller.md` (no infla SKILL.md). Si `research.enabled=false`, esta fase no existe y coste 0. Si `research.deep=true` (`--autoresearch`) manda `research/controller.md §Modo profundo` (10 comités seguidos, reinicio al mejorar); aquí solo se resume. Si `research.enabled=true` sin deep: deep research inicial (3-7 bullets con fuente en `LOG.md ## RESEARCH-INIT`) → comité de arranque mínimo → loop 1.R max 5 ciclos en `.opencode/goals/<slug>/research/YYYY-MM-DD-{slug}/NOTE.md` con `research/INDEX.md` hallable en 2 reads (`INDEX.md` → `NOTE.md`). Cada ciclo = 1 iter del límite global de 15; early-stop si 2 fallos consecutivos (`consecutive_fails >=2`) → invoca FASE 1b (consume 1 de 60). Promoción a `steps/` solo con `delta` replicado x2 + tests no mentirosos. Detalle completo en `research/controller.md`.
 
 ## FASE 1 — Runtime soberano (el plan propone, el runtime dispone)
 
@@ -123,6 +123,7 @@ Solo para TRIVIAL alcanzado con `--fast`: ejecuta fix directo, verifica con coma
 - **4 fails consecutivos → para workflow:** marca `bloqueado` y cierra con diagnóstico, sin invocar más comités.
 
 Si no hay 2 fails consecutivos, no hay comité. `skill({name:"goal-committee"})` global sigue disponible para invocación manual. FASE 1b solo orquesta: congela `## BLOQUEO`, **inyecta `.tmp/find-skills-retry-*.json` si existe**, invoca la skill correspondiente, aplica veredicto (puede reescribir PLAN.md/steps y recalcular `paralelizable?`), y vuelve a FASE 1. Techo global 60 comités. Zona gris (confidence 0.55-0.70 en p_fail): no fuerces comité, deja que FASE 1b lo rescate si falla y loguea `pre_comite:false->true`.
+**Excepción `research.deep=true`:** el techo por fallos **no para a los 4**; escala 2→standard, 3→PRO y sigue hasta **10 comités seguidos** (los 9 primeros standard, el **10.º PRO** con doble refutación), que se reinician a 0 al conseguir una mejora replicada x2 (`research/controller.md §Modo profundo`). Los 60 globales siguen mandando.
 
 ## FASE 1-auto — Autonomia iterativa (opcional, sin humano)
 
@@ -150,7 +151,7 @@ Fuente: `memory/current.md` (canónica, `memory.md` es espejo). Además, `memory
 ## Reglas de parada
 
 - Termina SOLO con evidencia de cada criterio de éxito (incluyendo tests + E2E web si aplicó).
-- Para a las 15 iteraciones o 60 comités totales sin completar: marca `bloqueado`, reporta qué falta, qué intentaste, veredictos en 1 línea, y propuesta.
+- Para a las 15 iteraciones o 60 comités totales sin completar (con `research.deep=true` el techo de iteraciones del goal sube a 30; los 60 comités globales no cambian): marca `bloqueado`, reporta qué falta, qué intentaste, veredictos en 1 línea, y propuesta.
 - No pidas confirmación para iterar. Solo al terminar o bloquearte del todo.
 - Nunca borres `.opencode/goals/<slug>/`. Es el entregable. Lo obsoleto va a `.opencode/goals/archive/`.
 

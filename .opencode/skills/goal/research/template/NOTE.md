@@ -9,13 +9,19 @@ harness_hash: sha256:...
 ---
 
 ## Hipótesis
-Qué se prueba y por qué (1-2 frases falsables).
+Qué se prueba y por qué (1-2 frases falsables + supuesto explícito).
 
-## Protocolo (FASE 1.R)
-Comando harness exacto y hash.
+## Protocolo (prueba hecha)
+Comando harness exacto, hash y semilla.
 
-## Evidencia
-Comando + resultado + fuente (si hubo deep research).
+## Resultado (métrica + proof)
+Valor medido, delta contra la base y ruta de `traces/<hash>.r1.proof`.
 
-## Veredicto
-Qué se aprendió y siguiente paso o early-stop.
+## Hallazgo (positivo / negativo)
+Lo que confirma o descarta la hipótesis, en una frase.
+
+## Interpretación
+Por qué pasó y qué implica para el siguiente intento.
+
+## Siguiente prueba
+La próxima hipótesis concreta (o el motivo para parar).

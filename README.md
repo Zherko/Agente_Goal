@@ -1,79 +1,80 @@
-﻿# Agente_Goal â€” Orquestador todo-terreno para opencode
+﻿# Agente Goal
 
-> **1 objetivo â†’ plan seccional â†’ runtime soberano â†’ comitÃ© solo si se atranca.** Portable en 2 carpetas.
+Orquestador de objetivos para **opencode**: plan seccional, ejecución con tests que no mienten, comités solo cuando se atasca, y un modo de **auto-research** que itera contra una métrica hasta mejorarla o rendirse con evidencia.
 
-`Goal` no es un plugin: es **skill + agente** con memoria dura, research determinista, paralelizaciÃ³n calibrada y mini-skills auto-propuestas.
+## Qué instala
 
-## QuÃ© trae
+| Pieza | Qué hace |
+| --- | --- |
+| `agents/goal.md` | Agente Goal (picker) |
+| `agents/team.md` | Clon portable de Goal |
+| `skills/goal/` | Núcleo: fases, plan, runtime, tests, investigación, tablero |
+| `skills/goal-*` | Dependencias (plan, discovery, comité, research, test, wait) |
+| `skills/karpathy-guidelines` | Los 4 principios que Goal aplica |
+| `commands/goal*.md` | Atajos `/goal`, `/goal-research`, `/goal-autoresearch`, `/goal-dashboard`, `/goal-test`, `/goal-wait`, `/goal-atributos` |
 
-| Carpeta en repo | Se instala en | QuÃ© es |
-|---|---|---|
-| `.opencode/agents/goal.md` | `~/.config/opencode/agents/goal.md` | Picker (router ligero <1k tok, personalidad 7/10/10/2) |
-| `.opencode/skills/goal/` | `~/.config/opencode/skills/goal/` | Cerebro (SKILL.md + research + memory + mini-skills + ENJAMBRE-RULES) |
+## Instalar
 
-Incluye:
-- **Memoria lÃ­mite duro 2.200 chars** estilo Hermes (no FIFO silencioso, exige batch si se llena) â€” hallable 2 reads `memory/INDEX.md â†’ current.md`
-- **Research determinista** `--research` con `early_stop 2`, `harness_hash` frozen, protocolo `YYYY-MM-DD_<investigaciÃ³n>__mXX/` â€” 5 ciclos max
-- **ParalelizaciÃ³n calibrada** desde tu Enjambre (overhead 62k, `block.json` ledger, writer-batch -77%, umbrales TRIVIAL â‰¤500 / SMALL â‰¤10k / LARGE >10k)
-- **Mini-skills** auto-propuestas: por repeticiÃ³n x2 o por `fallo â†’ comitÃ© â†’ fix` â†’ promociÃ³n solo con tests no mentirosos + replica x2 + auditor
-
-
-> **Nuevo 2026-11-06:** Karpathy ya vive dentro de Goal (4 principios + micro-contrato 3L) y Goal habla en humano: max 60 palabras / 5 lineas. Dependencias incluidas: .opencode/skills/karpathy-guidelines/ + skills/goal-*/ + agents/team.md
-
-## InstalaciÃ³n (otro opencode, 1 comando)
-
-### OpciÃ³n A â€” instalador (recomendado)
 ```powershell
-git clone https://github.com/Zherko/Agente_Goal.git
-.\Agente_Goal\install.ps1
-# o: .\install.ps1 -Force
-```
-Copia `.opencode/agents/goal.md` â†’ `~/.config/opencode/agents/` y `.opencode/skills/goal/` â†’ `~/.config/opencode/skills/goal/`. No pide confirmaciÃ³n si ya existe con `-Force`.
-
-### OpciÃ³n B â€” manual
-```powershell
-Copy-Item .opencode\agents\goal.md $env:USERPROFILE\.config\opencode\agents\goal.md -Force
-Copy-Item -Recurse .opencode\skills\goal $env:USERPROFILE\.config\opencode\skills\goal -Force
+git clone https://github.com/Zherko/Agente_Goal
+cd Agente_Goal
+.\install.ps1
 ```
 
-Verifica:
-```powershell
-opencode --agent Goal "hola â€” verifica instalaciÃ³n"
-# o slash:
-/goal "aÃ±adir auth email a Project/src/auth, con tests"
-```
+Copia agentes, skills y comandos a `~/.config/opencode/`. **No pisa tu memoria**: si ya tienes `memory.md`, `current.md`, `lessons.md` o `INDEX.md`, se conservan.
+
+Requisitos: opencode y, para el tablero, `python` (3.9+).
 
 ## Uso
 
 ```powershell
-/goal "aÃ±adir auth email a Project/src/auth, con tests"
-/goal "mejorar $/K churn 10% en packages/core" --research
-/goal --resume <slug>
+/goal "añadir auth por email en src/auth, con tests"
+/goal-research "bajar p95 de la API un 10%"
+/goal-autoresearch "bajar p95 de la API un 10%"
+/goal-dashboard
 ```
 
-Flujo: `FASE -1 grill me` â†’ `FASE 0 clasifica+check-first hash` â†’ `FASE 0b plan con agente plan (edit:deny)` â†’ `FASE 1.R research opt-in` â†’ `FASE 1 runtime (disjunciÃ³n+block.json)` â†’ `FASE 1b comitÃ© solo si 2 fallos`
+### `/goal` (flujo completo)
+Plan seccional con el agente `plan`, tabla de pasos con verificación, tests falsables (fallan sin el cambio, pasan con él), y comité cuando hay dos fallos seguidos.
 
-## Estructura instalada
+### `/goal-research` (investigación normal)
+Hasta 5 ciclos contra una métrica con harness congelado. Guarda cada experimento en `research/YYYY-MM-DD-nombre/` con `NOTE.md`, `metric.json` y pruebas de ejecución. Se rinde a los 3 fallos seguidos.
+
+### `/goal-autoresearch` (investigación profunda)
+Igual, pero con presupuesto mayor: comité cada 2 fallos hasta **10 comités seguidos**, que vuelven a 0 al conseguir una mejora replicada. El 10.º comité es **PRO** (doble refutación). Cada prueba escribe un cuaderno de 6 apartados:
 
 ```
-~/.config/opencode/
-  agents/goal.md
-  skills/goal/
-    SKILL.md
-    agent.md
-    ENJAMBRE-RULES.md
-    block.json / block.schema.json
-    memory/current.md + INDEX.md + README.md
-    research/controller.md + template/NOTE.md
-    mini-skills/README.md
+## Hipótesis
+## Protocolo (prueba hecha)
+## Resultado (métrica + proof)
+## Hallazgo (positivo / negativo)
+## Interpretación
+## Siguiente prueba
 ```
 
-Portable: copia esas 2 rutas y tienes el agente completo.
+Además mantiene `research/LEARNINGS.md`: la base de conocimiento acumulada (máx. 3 líneas por experimento).
 
-## Desarrollo / Lab
+### `/goal-dashboard` (tablero)
+Arranca la Torre de Control en `http://127.0.0.1:3010`:
 
-Lab aislado con harness determinista seed 42, tests no mentirosos y auditor compartimentado en `C:/Users/user/Documents/lab-opencode/runs/2026-10-18-mini-skills/` (no toca skill real).
+- **Objetivos** — contadores, evolución de consumo y tabla con nivel y coste.
+- **Auto-research** — lista de investigaciones; al entrar, gráfica de progreso arriba y pruebas debajo; al abrir una prueba, su cuaderno completo.
 
-## Licencia
+Se regenera en cada visita: puedes dejarlo abierto mientras Goal trabaja. Sin dependencias (solo Python estándar).
 
-MIT â€” ver `LICENSE` si se aÃ±ade.
+## Dónde vive el trabajo
+
+```
+.opencode/goals/<slug>/      plan, log, estado, diagnóstico
+research/                    experimentos fechados + índice + aprendizaje
+research/YYYY-MM-DD-nombre/  NOTE.md · metric.json · traces/*.proof
+```
+
+Todo dentro del proyecto que se mejora, versionable con git. Nada se borra: lo obsoleto se archiva.
+
+## Principios
+
+1. Piensa antes de codificar.
+2. Lo simple primero.
+3. Cambios quirúrgicos.
+4. Verifica con prueba real, siempre.

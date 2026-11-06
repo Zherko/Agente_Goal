@@ -1,46 +1,81 @@
 ﻿param([switch]$Force)
-$ErrorActionPreference="Stop"
+$ErrorActionPreference = "Stop"
+
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$destAgents = Join-Path $env:USERPROFILE ".config/opencode/agents"
-$destSkills = Join-Path $env:USERPROFILE ".config/opencode/skills/goal"
+$cfg      = Join-Path $env:USERPROFILE ".config/opencode"
+$dstAgents   = Join-Path $cfg "agents"
+$dstSkills   = Join-Path $cfg "skills"
+$dstCommands = Join-Path $cfg "commands"
 
-Write-Host "Agente_Goal installer â€” $repoRoot -> $destAgents + $destSkills" -ForegroundColor Cyan
+Write-Host "Agente_Goal -> $cfg" -ForegroundColor Cyan
 
-New-Item -ItemType Directory -Force -Path $destAgents | Out-Null
-New-Item -ItemType Directory -Force -Path $destSkills | Out-Null
+foreach ($d in @($dstAgents, $dstSkills, $dstCommands)) {
+    New-Item -ItemType Directory -Force -Path $d | Out-Null
+}
 
-# agents/goal.md
-$srcAgent = Join-Path $repoRoot ".opencode/agents/goal.md"
-if (-not (Test-Path $srcAgent)) { $srcAgent = Join-Path $repoRoot "agents-goal.md" }
-Copy-Item $srcAgent (Join-Path $destAgents "goal.md") -Force
-Write-Host "  âœ“ agents/goal.md" -ForegroundColor Green
+# --- memoria del usuario: se conserva siempre
+$memFiles = @("memory.md", "memory/current.md", "memory/lessons.md", "memory/INDEX.md")
+$backup = Join-Path $env:TEMP "agente-goal-mem-backup"
+Remove-Item $backup -Recurse -Force -ErrorAction SilentlyContinue
+foreach ($f in $memFiles) {
+    $p = Join-Path (Join-Path $dstSkills "goal") $f
+    if (Test-Path $p) {
+        $b = Join-Path $backup $f
+        New-Item -ItemType Directory -Force -Path (Split-Path $b) | Out-Null
+        Copy-Item $p $b -Force
+    }
+}
 
-# skills/goal/
-$srcSkills = Join-Path $repoRoot ".opencode/skills/goal"
-if (Test-Path $srcSkills) {
-  Copy-Item -Recurse -Force "$srcSkills/*" $destSkills
-  Write-Host "  âœ“ skills/goal/ ($((Get-ChildItem $destSkills -Recurse -File).Count) files)" -ForegroundColor Green
+# --- agente
+foreach ($a in @("goal.md", "team.md")) {
+    $s = Join-Path $repoRoot ".opencode/agents/$a"
+    if (Test-Path $s) {
+        Copy-Item $s (Join-Path $dstAgents $a) -Force
+        Write-Host "  OK agents/$a" -ForegroundColor Green
+    }
+}
+
+# --- skills (goal + dependencias)
+$skills = @(
+    "goal", "goal-committee", "goal-discovery", "goal-plan",
+    "goal-research", "goal-test", "goal-wait", "karpathy-guidelines"
+)
+foreach ($s in $skills) {
+    $src = Join-Path $repoRoot ".opencode/skills/$s"
+    if (-not (Test-Path $src)) { Write-Warning "falta skills/$s"; continue }
+    $dst = Join-Path $dstSkills $s
+    New-Item -ItemType Directory -Force -Path $dst | Out-Null
+    Copy-Item -Recurse -Force "$src/*" $dst
+    Write-Host "  OK skills/$s/" -ForegroundColor Green
+}
+
+# --- restaurar memoria previa
+if (Test-Path $backup) {
+    foreach ($f in $memFiles) {
+        $b = Join-Path $backup $f
+        if (Test-Path $b) {
+            $d = Join-Path (Join-Path $dstSkills "goal") $f
+            New-Item -ItemType Directory -Force -Path (Split-Path $d) | Out-Null
+            Copy-Item $b $d -Force
+        }
+    }
+    Write-Host "  OK memoria previa conservada" -ForegroundColor Green
+}
+
+# --- comandos
+Get-ChildItem (Join-Path $repoRoot ".opencode/commands") -Filter *.md -File | ForEach-Object {
+    Copy-Item $_.FullName (Join-Path $dstCommands $_.Name) -Force
+    Write-Host "  OK commands/$($_.Name)" -ForegroundColor Green
+}
+
+# --- comprobaciones
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Warning "python no encontrado: /goal-dashboard no arrancara (el resto funciona)."
 } else {
-  Write-Warning "No se encontrÃ³ .opencode/skills/goal en el repo"
+    Write-Host "  OK python -> /goal-dashboard disponible" -ForegroundColor Green
 }
 
-# dependencias: karpathy + team + skills sueltos
-$srcKarpathy = Join-Path $repoRoot ".opencode/skills/karpathy-guidelines"
-if (Test-Path $srcKarpathy) {
-  $dstKarpathy = Join-Path (Join-Path $env:USERPROFILE ".config/opencode/skills") "karpathy-guidelines"
-  New-Item -ItemType Directory -Force -Path $dstKarpathy | Out-Null
-  Copy-Item -Recurse -Force "$srcKarpathy/*" $dstKarpathy
-  Write-Host "  OK skills/karpathy-guidelines/" -ForegroundColor Green
-}
-$srcTeam = Join-Path $repoRoot ".opencode/agents/team.md"
-if (Test-Path $srcTeam) { Copy-Item $srcTeam (Join-Path $destAgents "team.md") -Force; Write-Host "  OK agents/team.md" -ForegroundColor Green }
-foreach($n in @("goal-committee","goal-discovery","goal-plan","goal-research","goal-test")){
-  $s = Join-Path $repoRoot ".opencode/skills/$n"
-  if(Test-Path $s){ $d=Join-Path (Join-Path $env:USERPROFILE ".config/opencode/skills") $n; New-Item -ItemType Directory -Force -Path $d | Out-Null; Copy-Item -Recurse -Force "$s/*" $d; Write-Host "  OK skills/$n/" -ForegroundColor Green }
-}
-
-Write-Host "
-Instalado. Verifica con: opencode --agent Goal ""hola""  o  /goal ""..." )" -ForegroundColor Cyan
-Write-Host "Estructura:" 
-Get-ChildItem $destSkills | Select-Object Name | Format-Table -AutoSize | Out-String | Write-Host
-
+$n = (Get-ChildItem (Join-Path $dstSkills "goal") -Recurse -File | Measure-Object).Count
+Write-Host ""
+Write-Host "Instalado: $n archivos en skills/goal, comandos en commands/." -ForegroundColor Cyan
+Write-Host "Prueba:  opencode  ->  /goal `"algo`"   |   /goal-dashboard   |   /goal-autoresearch"

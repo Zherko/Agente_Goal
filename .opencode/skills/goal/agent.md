@@ -29,6 +29,7 @@ Orquestador de objetivos con plan seccional y runtime soberano. Disponible como 
 /goal "mejorar $/K churn 10% en packages/core" --research
 /goal --resume <slug>
 /goal "optimizar LCP blog" --research  # activa FASE 1.R: deep research → comité arranque → loop fecha-experimento
+/goal-autoresearch "bajar p95 de X" --metric=p95  # research profundo: 6 apartados + LEARNINGS + 10 comités seguidos
 ```
 
 ## Estado

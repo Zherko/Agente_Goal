@@ -19,3 +19,5 @@ Equivale a `/goal "objetivo" --research --metric="..." --target="..."`
 Flujo: deep research inicial (3-7 bullets) → loop 1.R max 5 ciclos con `harness_hash` → early_stop 2 fallos → promoción solo si delta replica x2 + tests no mentirosos. Ver `research/controller.md`.
 
 Sin métrica cuantificable o en TRIVIAL, no activa research y avisa.
+
+Para investigación profunda (cuaderno de 6 apartados, `LEARNINGS.md` y hasta 10 comités seguidos con reinicio al mejorar) usa `/goal-autoresearch`.

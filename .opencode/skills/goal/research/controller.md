@@ -16,6 +16,7 @@ Antes del loop 1.R, ejecuta **Deep research de arranque** (igual que FASE 1b.2 p
 ```
 research/                           <- CANÓNICA (hermana de Project/ y .opencode/, creada por skill-init, versionada en git)
   _index.md                         <- READ 1: tabla machine-readable (compat: INDEX.md)
+  LEARNINGS.md                      <- base de conocimiento acumulada (obligatoria con --autoresearch)
   _template/                        <- plantilla clonable
   YYYY-MM-DD-{slug}/                <- 1 experimento = 1 carpeta fechada (README.md + NOTEBOOK.md + metric.json + prompt.md + traces/)
 .opencode/goals/<slug>/research/    <- MIRROR efímero (dual-write TTL 2 sprints, luego deprecado)
@@ -37,10 +38,10 @@ research/                           <- CANÓNICA (hermana de Project/ y .opencod
 ```md
 # Research Index — <slug>
 early_stop: 3
-| fecha | slug | type | verdict | consecutive_fails | link |
-| 2026-10-18 | vec-bm25-hnsw | auto | fail | 1 | ./2026-10-18-vec-bm25-hnsw/NOTE.md |
+| fecha | slug | type | verdict | hallazgo | consecutive_fails | comites | link |
+| 2026-10-18 | vec-bm25-hnsw | auto | fail | hnsw pierde recall en <10k | 1 | 0 | ./2026-10-18-vec-bm25-hnsw/NOTE.md |
 ```
-- **NOTE.md** por experimento (con frontmatter `verdict: fail/success`):
+- **NOTE.md** por experimento (con frontmatter `verdict: fail/success`) — 6 apartados, el cuaderno completo:
 ```
 ---
 verdict: fail
@@ -48,9 +49,11 @@ metric_value: 0.21
 delta: -0.02
 ---
 ## Hipótesis
-## Protocolo
-## Evidencia
-## Veredicto
+## Protocolo (prueba hecha)
+## Resultado (métrica + proof)
+## Hallazgo (positivo / negativo)
+## Interpretación
+## Siguiente prueba
 ```
 
 ## Loop 1.R — determinista y acotado (genérico por métrica)
@@ -66,13 +69,26 @@ delta: -0.02
 
 - **Detallada (CANÓNICA):** `research/_index.md` + `research/YYYY-MM-DD-{slug}/NOTEBOOK.md` + `metric.json` (append-only, nunca se borra, versionada en git). Mirror ` .opencode/goals/<slug>/research/INDEX.md` se mantiene por TTL dual-write.
 - **Resumida:** 1 línea agregada a `CONTEXT.md` FIFO (`research: mejor delta <hash> @ research/YYYY-MM-DD-{slug}/`) + 1 línea en `LOG.md` + 1 línea en `INDEX.md` global apuntando a `research/_index.md`.
-- **Descubrimiento:** `read research/_index.md` (READ 1) → sabes si parar y qué experimento abrir → `read research/YYYY-MM-DD-{slug}/NOTEBOOK.md` (READ 2). Compat: `read .opencode/goals/<slug>/research/INDEX.md` → mirror.
+- **Descubrimiento:** `read research/_index.md` (READ 1) → sabes si parar y qué experimento abrir → `read research/YYYY-MM-DD-{slug}/NOTEBOOK.md` (READ 2). Con `research.deep=true` el READ 2 es `research/LEARNINGS.md` (conocimiento acumulado) y el `NOTE.md` se abre solo para el experimento concreto. Compat: `read .opencode/goals/<slug>/research/INDEX.md` → mirror.
 
 ## Límites y comité
 
 - Loop: si `consecutive_fails ==2` → invoca **FASE 1b comité (consume 1 de 6)** con `## RESEARCH` acumulado; tras veredicto vuelve a 1.R. Si `consecutive_fails >=3` (early_stop) → para definitivo.
 - **Trigger mini-skill por comité:** si FASE 1b resuelve un bloqueo (2 fallos → comité → fix), propone candidata mini-skill anti-patrones en `research/YYYY-MM-DD-{slug}/NOTE.md` con lección; promoción solo si pasa tests no mentirosos + replica x2 + auditor PASS (ver `mini-skills/README.md`).
-- Techo global sigue siendo 15 iter / 6 comités. Research nunca lo expande.
+- Techo global sigue siendo 15 iter / 6 comités en modo normal. Research normal nunca lo expande; solo `§Modo profundo` (`--autoresearch`) amplía el presupuesto de este goal.
+
+## Modo profundo (`--autoresearch`)
+
+Solo si `research.deep=true` (flag `--autoresearch` o alias `/goal-autoresearch`). Sin flag no aplica: manda el loop normal (early_stop 3).
+
+- **Presupuesto:** `max_ciclos: 20`, techo de iteraciones del goal 30 (SKILL.md §Reglas de parada), **10 comités consecutivos**, nunca más de 60 globales.
+- **Disparo:** cada `consecutive_fails == 2` abre comité (formato FASE 1b) y **reinicia `consecutive_fails=0`** tras el veredicto; por eso pueden encadenarse hasta 10. Los comités 1-9 usan `skill({name:"goal-comite-internal"})`.
+- **Última oportunidad:** cuando `comites_consecutivos == 9`, el siguiente comité (el 10.º) se invoca con `skill({name:"goal-comite-pro-internal"})` — doble refutación — en vez del standard. Su veredicto es el último: si marca camino, se ejecuta y un fallo cierra; si no marca camino, cierra directo.
+- **Reinicio:** una mejora **replicada x2** (`delta` supera target + tests no mentirosos) pone `comites_consecutivos=0` y `consecutive_fails=0`. Sin réplica no reinicia.
+- **Parada:** `comites_consecutivos >= 10` → `bloqueado` definitivo: último `NOTE.md` con qué falta, hipótesis descartadas y propuesta; no se invocan más comités.
+- **Cuaderno:** `NOTE.md` con los 6 apartados (Hipótesis, Protocolo, Resultado, Hallazgo, Interpretación, Siguiente prueba).
+- **Base de conocimiento:** `research/LEARNINGS.md` (append-only en el proyecto, máx 3 líneas por experimento: qué se aprendió y qué descartar). READ 1 `_index.md` → READ 2 `LEARNINGS.md`; `NOTE.md` solo al abrir un experimento concreto.
+- **Anti-simulación:** sin `harness_hash` + proof + `delta` real el ciclo no cuenta y no reinicia nada.
 
 ## Blindaje Karpathy — anti-simulación (obligatorio)
 

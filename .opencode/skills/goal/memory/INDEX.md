@@ -1,5 +1,6 @@
-# Memory Index — Goal
+# Memoria — índice hallable en 2 reads
 
 | fecha | tema | líneas | link |
-| 2026-10-17 | baseline | 23 | ./current.md |
-| 2026-11-02 | compact | 30 | ./current.md |
+| — | — | — | — |
+
+READ 1: esta tabla → READ 2: `memory/current.md`.
