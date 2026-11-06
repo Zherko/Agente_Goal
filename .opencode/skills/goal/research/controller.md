@@ -63,7 +63,20 @@ delta: -0.02
 - **Harness hermético frozen:** `harness_hash = sha256(harness_code + metric_def + prompt.md + seed + docker.lock)` versionado en `research/.harness.lock`. Misma hipótesis + mismo hash → mismo resultado. Sin hash → REJECT.
 - **Proof de ejecución (ruta única):** `research/<exp>/traces/<harness_hash>.r1.proof` y `.r2.proof` para la réplica x2. JSON `{run_id, harness_hash, dataset_hash, seed, started, ended, exit_code, metric_value}`. Se resuelve con `logger/index.js:validateProof`; prohibido duplicar el literal en SKILL.md/team y prohibido `lab/traces/` (TTL 72h).
 - **Un ciclo:** hipótesis falsable → parche mínimo → `harness` genérico → `metric.json` `{metric_value, delta}` → escribe `NOTEBOOK.md` (o `NOTE.md` mirror) + actualiza `research/_index.md` (y mirror `INDEX.md`).
-- **Promoción a steps/:** solo si `delta` supera `target` genérico y **replica 2 mediciones** con mismo `harness_hash` + pasa `tests no mentirosos`. Si no, queda en sandbox y se descarta.
+- **Promoción a steps/:** solo si `delta` supera `target` genérico y **replica 2 mediciones** con mismo `harness_hash` + pasa `tests no mentirosos`. Si no, se revierte el árbol, pero **nunca sin antes guardar el cambio** (ver §Conservar la mejor versión).
+
+## Conservar la mejor versión (obligatorio, anti-pérdida)
+
+Ninguna prueba puede desaparecer sin rastro del código que la produjo.
+
+- **Antes de revertir o cambiar de hipótesis:** guarda el parche en `research/<exp>/artifacts/change.patch` (`git diff > change.patch`; sin git, copia de los archivos tocados en `artifacts/files/`). Sin parche guardado, prohibido `git checkout --`, `reset --hard` o borrar el árbol.
+- **Mejora real:** solo cuando `delta` supera el objetivo **y** réplica x2 pasa. Entonces, además del parche:
+  1. `git tag goal/<slug>/<fecha>-<exp>` si el proyecto es repo git (anotado, con el `metric.json` en el mensaje).
+  2. Reescribe `research/BEST.md`: `experimento | fecha | métrica | delta | patch | tag`. Es el apuntador único a la mejor versión conocida.
+- **Sin git:** `research/BEST/` guarda copia completa de los archivos de la mejor versión + `BEST.md`. Se sobrescribe **solo** si la nueva mejora es estrictamente mejor.
+- **Empate o duda:** no se toca `BEST.md`. La versión anterior manda.
+- **Cierre del goal:** si el resultado final no supera `BEST.md`, se restaura esa versión (parche o copia) antes de dar por cerrado; el agente no puede cerrar dejando el proyecto peor que la mejor prueba.
+- **Tablero:** `BEST.md` se muestra como panel «Mejor versión guardada» en la investigación.
 
 ## Memoria (canónica en proyecto, no en Goal)
 

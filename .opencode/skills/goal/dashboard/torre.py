@@ -187,6 +187,7 @@ def scan_campaign(path, cid, label):
     return {
         "id": cid, "label": label, "path": path, "experiments": exps,
         "learnings": read(os.path.join(path, "LEARNINGS.md")),
+        "best": read(os.path.join(path, "BEST.md")),
         "wins": sum(1 for e in exps if e["verdict"] in ("success", "ok", "win", "mejora")),
         "fails": sum(1 for e in exps if e["verdict"] in ("fail", "lose")),
         "best_delta": best,
@@ -275,8 +276,29 @@ def inline(s):
 
 def md(text):
     out, buf, in_code = [], [], False
+    rows = []
+
+    def flush_rows():
+        if not rows:
+            return
+        head = rows[0]
+        body = [r for r in rows[1:] if r != ["-"]]
+        th = "".join(f"<th>{inline(c)}</th>" for c in head)
+        tr = "".join("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>" for r in body)
+        out.append(f"<table><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table>")
+        rows.clear()
+
     for line in text.splitlines():
-        if line.strip().startswith("```"):
+        s = line.strip()
+        if s.startswith("|"):
+            cells = [c.strip() for c in s.strip("|").split("|")]
+            if all(c and set(c) <= set("-: ") for c in cells):
+                rows.append(["-"])
+            else:
+                rows.append(cells)
+            continue
+        flush_rows()
+        if s.startswith("```"):
             if in_code:
                 out.append("<pre>" + html.escape("\n".join(buf)) + "</pre>")
                 buf, in_code = [], False
@@ -299,6 +321,7 @@ def md(text):
             buf.append("<li>" + inline(s.lstrip()[2:]) + "</li>")
             continue
         buf.append(inline(s))
+    flush_rows()
     if in_code and buf:
         out.append("<pre>" + html.escape("\n".join(buf)) + "</pre>")
         buf = []
@@ -596,6 +619,9 @@ def view_run(data, cid):
         f'<td style="color:var(--dim)">{html.escape(re.sub(r"<[^>]+>", "", e["hallazgo"])[:80]) or "—"}</td></tr>'
         for e in reversed(c["experiments"])) or '<tr><td colspan="4" class="empty">Sin pruebas.</td></tr>'
     learn = md(c["learnings"]) if c["learnings"].strip() else '<div class="empty">Sin aprendizaje acumulado.</div>'
+    best = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Mejor versión guardada</h2>'
+            f'<div class="psub">Apuntador a la mejor prueba conocida</div></div></div>'
+            f'<div class="pbody note">{md(c["best"])}</div></div>') if c["best"].strip() else ""
     body = f"""
 <p class="sub" style="margin:0 0 12px"><a href="/research">← investigaciones</a></p>
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -604,6 +630,7 @@ def view_run(data, cid):
   <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Progreso</h2>
   <div class="psub">Métrica por prueba, en orden</div></div></div><div class="pbody">{area_chart(pts, unit="")}</div></div>
+{best}
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Pruebas</h2>
   <div class="psub">Pincha para abrir el cuaderno</div></div></div>
   <div class="pbody" style="padding-top:0"><table><thead><tr><th>Fecha · prueba</th><th>Veredicto</th><th>Cambio</th><th>Hallazgo</th></tr></thead>
