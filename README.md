@@ -58,19 +58,26 @@ Además mantiene `research/LEARNINGS.md`: la base de conocimiento acumulada (má
 Arranca la Torre de Control en `http://127.0.0.1:3010`:
 
 - **Objetivos** — contadores, evolución de consumo y tabla con nivel y coste.
-- **Auto-research** — lista de investigaciones; al entrar, gráfica de progreso arriba y pruebas debajo; al abrir una prueba, su cuaderno completo.
+- **Auto-research** — lista de investigaciones; al entrar, gráfica de progreso arriba, la ruta de hipótesis, las versiones guardadas y las pruebas debajo; al abrir una prueba, su cuaderno completo.
 
 Se regenera en cada visita: puedes dejarlo abierto mientras Goal trabaja. Sin dependencias (solo Python estándar).
 
 ## Dónde vive el trabajo
 
 ```
-.opencode/goals/<slug>/      plan, log, estado, diagnóstico
-research/                    experimentos fechados + índice + aprendizaje
-research/YYYY-MM-DD-nombre/  NOTE.md · metric.json · traces/*.proof
+.opencode/goals/<slug>/        plan, log, estado, diagnóstico
+research/
+  _index.md                    tabla de pruebas (fecha · veredicto · hallazgo)
+  LEARNINGS.md                 conocimiento acumulado, 3 líneas por prueba
+  ROADMAP.md                   camino recorrido · vivo · descartado · siguiente
+  VERSIONS.md                  versiones del archivo investigado
+  BEST.md                      apuntador a la mejor versión
+  versions/v000-original/      el archivo tal como estaba, intacto
+  versions/vNNN-<prueba>/      copia exacta en cada mejora (archivo + meta.json)
+  YYYY-MM-DD-<prueba>/         NOTE.md · metric.json · traces/*.proof · artifacts/
 ```
 
-Todo dentro del proyecto que se mejora, versionable con git. Nada se borra: lo obsoleto se archiva.
+Nada se pierde: cada prueba conserva su cuaderno y su parche, y cada mejora deja una copia completa del archivo. Al cerrar, si el resultado final es peor que la mejor versión, se restaura esa.
 
 ## Principios
 
