@@ -157,6 +157,20 @@ def scan_experiment(path, name):
     }
 
 
+def scan_holdout(path):
+    hp = os.path.join(path, "holdout", "holdout.json")
+    if not os.path.exists(hp):
+        return None
+    try:
+        d = json.loads(read(hp) or "{}")
+    except json.JSONDecodeError:
+        return None
+    d.setdefault("n", 0)
+    d.setdefault("total", 0)
+    d.setdefault("pct", 20)
+    return d
+
+
 def scan_versions(path):
     base = os.path.join(path, "versions")
     out = []
@@ -215,6 +229,8 @@ def scan_campaign(path, cid, label):
         "id": cid, "label": label, "path": path, "experiments": exps,
         "learnings": read(os.path.join(path, "LEARNINGS.md")),
         "roadmap": read(os.path.join(path, "ROADMAP.md")),
+        "scope": read(os.path.join(path, "CHANGE_SPACE.md")),
+        "holdout": scan_holdout(path),
         "best": read(os.path.join(path, "BEST.md")),
         "versions": scan_versions(path),
         "cycles": len([l for l in read(os.path.join(path, "cycles.jsonl")).splitlines() if l.strip()]),
@@ -662,6 +678,24 @@ def view_run(data, cid):
     roadmap = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Ruta de investigación</h2>'
                f'<div class="psub">Camino recorrido, vivo y descartado</div></div></div>'
                f'<div class="pbody note">{md(c["roadmap"])}</div></div>') if c["roadmap"].strip() else ""
+    scope = (f'<div class="panel"><div class="phead"><div><h2 class="ptitle">Espacio de cambio</h2>'
+             f'<div class="psub">Qué se puede tocar y qué no, declarado antes de empezar</div></div></div>'
+             f'<div class="pbody note">{md(c["scope"])}</div></div>') if c["scope"].strip() else ""
+    h = c["holdout"]
+    if h:
+        hchips = [f'<span class="chip">{h["n"]} de {h["total"]} casos</span>',
+                  f'<span class="chip">{h["pct"]}% guardado</span>']
+        if h.get("oos_value") is not None:
+            hchips.append(f'<span class="chip">en examen {num(h["oos_value"]):.3g}</span>')
+        if h.get("oos_delta") is not None:
+            hchips.append(f'<span class="chip">cambio {fmt_delta(num(h["oos_delta"]))}</span>')
+        if h.get("sha256"):
+            hchips.append(f'<span class="chip" style="color:var(--dim)">{html.escape(str(h["sha256"])[:10])}</span>')
+        holdout = ('<div class="panel"><div class="phead"><div><h2 class="ptitle">Examen guardado</h2>'
+                   '<div class="psub">Fuera de muestra: no se usa para mejorar</div></div></div>'
+                   f'<div class="pbody"><div class="chips">{"".join(hchips)}</div></div></div>')
+    else:
+        holdout = ""
     if c["versions"]:
         vrows = "".join(
             f'<tr><td><a href="/ver/{c["id"]}/{v["id"]}"><b>{html.escape(v["id"])}</b></a></td>'
@@ -682,6 +716,8 @@ def view_run(data, cid):
   <span class="chip bad">{c['fails']} sin mejora</span><span class="chip">{c['cycles']} ciclos</span><span class="chip">mejor {fmt_delta(c['best_delta'])}</span></div>
 <div class="panel"><div class="phead"><div><h2 class="ptitle">Progreso</h2>
   <div class="psub">Métrica por prueba, en orden</div></div></div><div class="pbody">{area_chart(pts, unit="")}</div></div>
+{scope}
+{holdout}
 {roadmap}
 {vers}
 {best}

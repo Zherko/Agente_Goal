@@ -47,6 +47,9 @@ early_stop: 3
 verdict: fail
 metric_value: 0.21
 delta: -0.02
+oos_value: 0.19
+oos_delta: -0.01
+based_on: LEARNINGS.md#2026-10-17 (el índice no movía p95)
 ---
 ## Hipótesis
 ## Protocolo (prueba hecha)
@@ -63,7 +66,46 @@ delta: -0.02
 - **Harness hermético frozen:** `harness_hash = sha256(harness_code + metric_def + prompt.md + seed + docker.lock)` versionado en `research/.harness.lock`. Misma hipótesis + mismo hash → mismo resultado. Sin hash → REJECT.
 - **Proof de ejecución (ruta única):** `research/<exp>/traces/<harness_hash>.r1.proof` y `.r2.proof` para la réplica x2. JSON `{run_id, harness_hash, dataset_hash, seed, started, ended, exit_code, metric_value}`. Se resuelve con `logger/index.js:validateProof`; prohibido duplicar el literal en SKILL.md/team y prohibido `lab/traces/` (TTL 72h).
 - **Un ciclo:** hipótesis falsable → parche mínimo → `harness` genérico → `metric.json` `{metric_value, delta}` → escribe `NOTEBOOK.md` (o `NOTE.md` mirror) + actualiza `research/_index.md` (y mirror `INDEX.md`).
-- **Promoción a steps/:** solo si `delta` supera `target` genérico y **replica 2 mediciones** con mismo `harness_hash` + pasa `tests no mentirosos`. Si no, se revierte el árbol, pero **nunca sin antes guardar el cambio** (ver §Versiones del sujeto).
+- **Promoción a steps/:** solo si `delta` supera `target` genérico, **replica 2 mediciones** con mismo `harness_hash`, **mejora también en el examen guardado** (§Examen guardado) y pasa `tests no mentirosos`. Si no, se revierte el árbol, pero **nunca sin antes guardar el cambio** (ver §Versiones del sujeto).
+
+## Espacio de cambio declarado (antes de tocar)
+
+Antes del primer ciclo se escribe **qué se puede tocar y qué no**. Sin esto, cualquier mejora es sospechosa.
+
+- **`research/CHANGE_SPACE.md`** (creado en FASE 0b, junto al sujeto):
+  ```
+  ## Se puede tocar
+  - scorer.py (funciones de puntuación)
+  - params.json (umbrales)
+  ## Prohibido tocar
+  - harness/ (el medidor no se cambia a mitad)
+  - datos de validación
+  - tests/ (los tests no se ajustan para pasar)
+  ```
+- **Regla dura:** un parche fuera de `Se puede tocar` → ciclo inválido (REJECT), aunque mejore la métrica.
+- **Cambio de alcance:** si hace falta tocar algo prohibido, se propone en `NOTE.md` y se actualiza `CHANGE_SPACE.md` **antes** del parche, dejando constancia del motivo.
+- **Tablero:** se muestra como panel «Espacio de cambio».
+
+## Examen guardado — fuera de muestra (obligatorio si hay muestra)
+
+Repetir la medición dos veces solo prueba estabilidad; el examen guardado prueba que no fue chiripa.
+
+- **Reparto:** al declarar el dataset, si hay **muestra suficiente** (≥50 casos) se reserva **~20%** que **no se usa nunca** para proponer ni ajustar. Si no hay muestra suficiente, se anota `oos: no_aplica` con el motivo y no se inventa.
+- **`research/holdout/`**: copia del 20% + `holdout.json` `{n, total, pct, sha256, fecha}`. Se crea una sola vez.
+- **`holdout_hash`** entra en `harness_hash`; cambiarlo invalida la comparación con las pruebas anteriores.
+- **Cuándo se mide:** solo al validar una mejora real (antes de crear versión) y al cerrar el goal. Nunca en el bucle de hipótesis.
+- **Promoción:** exige mejorar en entrenamiento **y** en el examen guardado. Si mejora en uno y empeora en el otro, es sobreajuste: no se promueve y se anota en `LEARNINGS.md`.
+- **`metric.json`** añade `{oos_value, oos_delta}`. El veredicto (`success`) solo es válido si `oos_delta` también mejora o se mantiene.
+- **Prohibido:** mirar el examen para elegir la siguiente hipótesis. Una mirada = el examen deja de valer y hay que repartir otro.
+
+## La crítica como señal (no solo el número)
+
+El número dice si mejoró; lo escrito al fallar dice **por dónde seguir**.
+
+- **`LEARNINGS.md`** no es un diario: cada entrada lleva `qué falló` + `pista` (1 línea accionable).
+- **`based_on:`** en el frontmatter de cada `NOTE.md` cita la línea concreta (de `LEARNINGS.md` o del `## Siguiente prueba` anterior) que originó la hipótesis. Sin `based_on` → ciclo inválido.
+- **Regla:** si la pista contradice el resultado, se corrige la pista; no se ignora.
+- **Cierre:** `ROADMAP.md ## Siguiente` debe salir de la última pista, no de una idea nueva sin relación.
 
 ## Versiones del sujeto (obligatorio, anti-pérdida)
 
@@ -125,7 +167,7 @@ Solo si `research.deep=true` (flag `--autoresearch` o alias `/goal-autoresearch`
 - **Presupuesto:** `max_ciclos: 20` y **cuota de 15 ciclos completos** antes de poder parar, techo de iteraciones del goal 30 (SKILL.md §Reglas de parada), **10 comités consecutivos**, nunca más de 60 globales.
 - **Disparo:** cada `consecutive_fails == 2` abre comité (formato FASE 1b) y **reinicia `consecutive_fails=0`** tras el veredicto; por eso pueden encadenarse hasta 10. Los comités 1-9 usan `skill({name:"goal-comite-internal"})`.
 - **Última oportunidad:** cuando `comites_consecutivos == 9`, el siguiente comité (el 10.º) se invoca con `skill({name:"goal-comite-pro-internal"})` — doble refutación — en vez del standard. Su veredicto es el último: si marca camino, se ejecuta y un fallo cierra; si no marca camino, cierra directo.
-- **Reinicio:** una mejora **replicada x2** (`delta` supera target + tests no mentirosos) pone `comites_consecutivos=0` y `consecutive_fails=0`. Sin réplica no reinicia.
+- **Reinicio:** una mejora **replicada x2** (`delta` supera target + tests no mentirosos + examen guardado no empeora) pone `comites_consecutivos=0` y `consecutive_fails=0`. Sin réplica no reinicia.
 - **Parada:** `comites_consecutivos >= 10` → `bloqueado` definitivo: último `NOTE.md` con qué falta, hipótesis descartadas y propuesta; no se invocan más comités.
 - **Cuaderno:** `NOTE.md` con los 6 apartados (Hipótesis, Protocolo, Resultado, Hallazgo, Interpretación, Siguiente prueba).
 - **Base de conocimiento:** `research/LEARNINGS.md` (append-only en el proyecto, máx 3 líneas por experimento: qué se aprendió y qué descartar). READ 1 `_index.md` → READ 2 `LEARNINGS.md`; `NOTE.md` solo al abrir un experimento concreto.

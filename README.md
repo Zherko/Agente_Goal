@@ -52,7 +52,9 @@ Igual, pero con presupuesto mayor: comité cada 2 fallos hasta **10 comités seg
 ## Siguiente prueba
 ```
 
-Además mantiene `research/LEARNINGS.md`: la base de conocimiento acumulada (máx. 3 líneas por experimento).
+Además mantiene `research/LEARNINGS.md`: la base de conocimiento acumulada (máx. 3 líneas por experimento, con la pista que guía la siguiente prueba).
+
+Antes de empezar escribe `research/CHANGE_SPACE.md` con lo que se puede tocar y lo que no (el medidor y los tests, nunca). Si hay muestra suficiente (≥50 casos) aparta un **20%** en `research/holdout/` que no se usa para mejorar: solo se mide al validar una mejora o al cerrar. Mejorar solo en entrenamiento y no en el examen es sobreajuste y no se promueve.
 
 ### `/goal-dashboard` (tablero)
 Arranca la Torre de Control en `http://127.0.0.1:3010`:
@@ -70,6 +72,8 @@ research/
   _index.md                    tabla de pruebas (fecha · veredicto · hallazgo)
   LEARNINGS.md                 conocimiento acumulado, 3 líneas por prueba
   ROADMAP.md                   camino recorrido · vivo · descartado · siguiente
+  CHANGE_SPACE.md              qué se puede tocar y qué no
+  holdout/holdout.json         20% reservado, fuera de muestra
   VERSIONS.md                  versiones del archivo investigado
   BEST.md                      apuntador a la mejor versión
   versions/v000-original/      el archivo tal como estaba, intacto
