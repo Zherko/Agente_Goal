@@ -20,25 +20,25 @@ research/                           <- CANÓNICA (hermana de Project/ y .opencod
   YYYY-MM-DD-{slug}/                <- 1 experimento = 1 carpeta fechada (README.md + NOTEBOOK.md + metric.json + prompt.md + traces/)
 .opencode/goals/<slug>/research/    <- MIRROR efímero (dual-write TTL 2 sprints, luego deprecado)
   INDEX.md                          <- READ 1 mirror
-  2026-10-18_vec-bm25-hnsw/
+  2026-10-18-vec-bm25-hnsw/
     NOTE.md                         <- READ 2 mirror
     artifacts/ (opcional)
 ```
 
 > **Regla nueva:** si `research/` no existe, Goal la crea vía `skill-init` (`_index.md` + `_template/` + `.opencode/skills/research/SKILL.md`). La canónica manda; el mirror solo facilita `read research/INDEX.md` legacy.
 
-- **Carpeta:** `YYYY-MM-DD_<investigacion-kebab>__delta<signo><valor>/` — protocolo `fecha - investigación - mejora`. Fecha = orden lexicográfico, investigación = slug estable, mejora = delta del ciclo (ej: `m08` = -8.1%, `p03` = +3%). Sin `HHMM`, sin `auto/` (YAGNI). Si algún día coexiste `manual/`, se migra a `research/auto/` + `research/manual/` y se filtra por campo `type`.
+- **Carpeta:** `YYYY-MM-DD-{slug}/` — mismo naming que `skill-init` y `_index.md`. El delta (`m08`, `p03`) **no va en el nombre**: va en `metric.json.delta` y en el veredicto de `NOTE.md`. Sin `HHMM`, sin `auto/` (YAGNI). Si algún día coexiste `manual/`, se migra a `research/auto/` + `research/manual/` y se filtra por campo `type`.
 
-  Ejemplos:
-  - `2026-10-18_gate-calificado__m08/` (gate = -8.1%)
-  - `2026-10-18_coalescing-batch__m05/` (coalescing = -4.9% adicional)
-  - `2026-10-18_holdout-live__m02/` (holdout = -2.1% degradación validada)
+  Ejemplos (carpeta canónica; el delta vive dentro):
+  - `2026-10-18-gate-calificado/` (delta -8.1% en `metric.json`)
+  - `2026-10-18-coalescing-batch/` (delta -4.9% adicional)
+  - `2026-10-18-holdout-live/` (delta -2.1% degradación validada)
 - **INDEX.md** (append-only, fuente de verdad para early-stop):
 ```md
 # Research Index — <slug>
 early_stop: 3
 | fecha | slug | type | verdict | consecutive_fails | link |
-| 2026-10-18 | vec-bm25-hnsw | auto | fail | 1 | ./2026-10-18_vec-bm25-hnsw/NOTE.md |
+| 2026-10-18 | vec-bm25-hnsw | auto | fail | 1 | ./2026-10-18-vec-bm25-hnsw/NOTE.md |
 ```
 - **NOTE.md** por experimento (con frontmatter `verdict: fail/success`):
 ```
@@ -58,6 +58,7 @@ delta: -0.02
 - **Presupuesto:** max 5 ciclos, cada ciclo = 1 iter del límite global de 15 (no presupuesto paralelo) + `budget` dual `max_tokens + max_wall_time` por tarea. `INDEX.md: early_stop: 3` → si `consecutive_fails ==2` invoca comité (1 de 6), si `>=3` para definitivo.
 - **Métrica genérica (no hardcode):** definida en FASE 0b como `research: {metric_key, target, direction, harness}` en `PLAN.md` y materializada en `research/YYYY-MM-DD-{slug}/metric.json` `{metric_key, baseline, result, delta, optimizer, dataset_hash, direction}` (0.0-1.0). `tokens_por_exito` es solo un `metric_key` más del `MetricRegistry`, no el default.
 - **Harness hermético frozen:** `harness_hash = sha256(harness_code + metric_def + prompt.md + seed + docker.lock)` versionado en `research/.harness.lock`. Misma hipótesis + mismo hash → mismo resultado. Sin hash → REJECT.
+- **Proof de ejecución (ruta única):** `research/<exp>/traces/<harness_hash>.r1.proof` y `.r2.proof` para la réplica x2. JSON `{run_id, harness_hash, dataset_hash, seed, started, ended, exit_code, metric_value}`. Se resuelve con `logger/index.js:validateProof`; prohibido duplicar el literal en SKILL.md/team y prohibido `lab/traces/` (TTL 72h).
 - **Un ciclo:** hipótesis falsable → parche mínimo → `harness` genérico → `metric.json` `{metric_value, delta}` → escribe `NOTEBOOK.md` (o `NOTE.md` mirror) + actualiza `research/_index.md` (y mirror `INDEX.md`).
 - **Promoción a steps/:** solo si `delta` supera `target` genérico y **replica 2 mediciones** con mismo `harness_hash` + pasa `tests no mentirosos`. Si no, queda en sandbox y se descarta.
 
@@ -70,7 +71,7 @@ delta: -0.02
 ## Límites y comité
 
 - Loop: si `consecutive_fails ==2` → invoca **FASE 1b comité (consume 1 de 6)** con `## RESEARCH` acumulado; tras veredicto vuelve a 1.R. Si `consecutive_fails >=3` (early_stop) → para definitivo.
-- **Trigger mini-skill por comité:** si FASE 1b resuelve un bloqueo (2 fallos → comité → fix), propone candidata mini-skill anti-patrones en `research/YYYY-MM-DD_<slug>__mXX/NOTE.md` con lección; promoción solo si pasa tests no mentirosos + replica x2 + auditor PASS (ver `mini-skills/README.md`).
+- **Trigger mini-skill por comité:** si FASE 1b resuelve un bloqueo (2 fallos → comité → fix), propone candidata mini-skill anti-patrones en `research/YYYY-MM-DD-{slug}/NOTE.md` con lección; promoción solo si pasa tests no mentirosos + replica x2 + auditor PASS (ver `mini-skills/README.md`).
 - Techo global sigue siendo 15 iter / 6 comités. Research nunca lo expande.
 
 ## Blindaje Karpathy — anti-simulación (obligatorio)

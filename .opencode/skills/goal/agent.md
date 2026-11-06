@@ -7,15 +7,17 @@ Orquestador de objetivos con plan seccional y runtime soberano. Disponible como 
 - **Router ligero:** `agent.md:1` (este archivo, <1k tokens) — solo rol + blindajes + dispatch
 - **Fuente única:** `SKILL.md:1` (fases -1→0→0b→1.R→1→1b) + `research/controller.md` para auto-research + `ENJAMBRE-RULES.md` para paralelización — tests no mentirosos, output cerrado
 - **Lazy load obligatorio:** al iniciar SIEMPRE `read SKILL.md` completo antes de actuar. Prohibido decidir sin leerlo.
-- **Memoria en disco:** `.opencode/goals/<slug>/` + `INDEX.md` — no en chat; research hallable en 2 reads: `research/INDEX.md` → `research/YYYY-MM-DD_<slug>/NOTE.md`
+- **Memoria en disco:** `.opencode/goals/<slug>/` + `INDEX.md` — no en chat; research hallable en 2 reads: `research/INDEX.md` → `research/YYYY-MM-DD-{slug}/NOTE.md`
 - **Plan aislado:** delega partición a agente `plan` nativo (`edit:deny`), nunca planifica escribiendo código
 - **Comité solo al atrancarse:** `SKILL.md:81` — max 2 por punto, 6 global, con deep research + Key Assumptions Check + 5 agentes paralelos + refutación cruzada + juez con criterios de reversión (alineado `/skill-comite`); research: deep research inicial + comité arranque opcional, luego early-stop 2 fallos
 
 ## Flujo resumido (detalle en SKILL.md + research/controller.md)
-1. FASE -1 grill me si ambiguo (puede proponer `research.enabled` si huele métrica) → 2. FASE 0 slug+clasifica+check-first por hash → 3. FASE 0b plan con `plan` (+ research harness si enabled) → 3b. FASE 1.R deep research inicial + comité arranque + loop hallable 2 reads (opt-in `--research`) → 4. FASE 1 runtime disyunción+dispatch+tests → 5. FASE 1b desbloqueo con comité si 2 fallos
+1. FASE -1 grill me si ambiguo (puede proponer `research.enabled` si huele métrica) → 2. FASE 0 slug + check-first por hash (clasifica y abre la vía rápida solo con `--fast`) → 3. FASE 0b plan con `plan` (+ research harness si enabled) → 3b. FASE 1.R deep research inicial + comité arranque + loop hallable 2 reads (opt-in `--research`) → 4. FASE 1 runtime disyunción+dispatch+tests → 5. FASE 1b desbloqueo con comité si 2 fallos
+
+> **Por defecto flujo completo.** `/goal` sin flags = plan seccional + pasos + comité cuando p_fail>0.55 o 2 fallos. La vía rápida TRIVIAL exige `--fast` explícito.
 
 ## Blindajes core
-- TRIVIAL va vía rápida sin PLAN ni comité (`SKILL.md:24` + `ENJAMBRE-RULES.md:0` ≤500 tok)
+- TRIVIAL va vía rápida sin PLAN ni comité **solo con `--fast`** (`SKILL.md:24` + `ENJAMBRE-RULES.md:0` ≤500 tok)
 - `paralelizable?` es hipótesis, runtime verifica disjunción + `block.json` ledger (`SKILL.md:42`, `block.schema.json`)
 - Writer-batch: 3+ docs disjuntos → 1 sesión (-77% vs N workers) (`ENJAMBRE-RULES.md:2`)
 - Tests no mentirosos obligatorios, Playwright si UI (`SKILL.md:72`)

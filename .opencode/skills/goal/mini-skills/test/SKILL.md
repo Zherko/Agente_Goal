@@ -18,7 +18,7 @@ Dispara el mismo harness que GOAL auto, a demanda.
 - `/goal_test --strict` → igual, explícito
 - `/goal_test --off --reason="..."` → desactiva con traza
 
-Ambos caminos usan `core/checks` — no hay lógica duplicada con GOAL auto.
+Ambos caminos usan este mismo contrato L0-L3 — no hay lógica duplicada con GOAL auto.
 
 Ejecuta: `npx vitest run tests/harness/plan_long --reporter=verbose` + checks L0-L3 según `GOAL-TEST-CONTRACT`.
 Si falta `diagnosis/diff.patch` en fail → run inválido.

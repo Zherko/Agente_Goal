@@ -12,15 +12,15 @@ Objetivo: $ARGUMENTS
 
 Si el objetivo viene vacío, pide 1 sola pregunta aclaratoria y no avances.
 
-**Flags:** `--full` fuerza flujo completo (comité → plan → iteración) sin clasificar; `--research` activa auto-research para bajar métrica (ver FASE 1.R). Alias `/goal-full` inyecta `--full`, `/goal-research` inyecta `--research`. Precedencia: `CLI flag > opencode.json goal.mode > auto`. Sin flag, clasifica normal.
+**Flags:** el **modo por defecto es completo** (`--full` implícito): plan seccional + iteración con comité cuando toca, sin vía rápida. `--fast` es la única forma de activar la clasificación y el atajo TRIVIAL; `--research` activa auto-research para bajar métrica (ver FASE 1.R). Alias `/goal-research` inyecta `--research`. Precedencia: `CLI flag > opencode.json goal.mode > full`. Sin flag → flujo completo.
 
 ## FASE -1 — Grill me (solo si hace falta)
 
 Tras razonar el objetivo en 30 segundos: si está suficientemente claro (qué hay que conseguir, dónde, cómo se verifica), empieza directo sin preguntar. Si falta contexto crítico, hay ambigüedad real o 2+ interpretaciones válidas, haz un **grill me** corto: max 5 preguntas concretas, cada una con tu recomendación por defecto. No interrogues por rutina. Ejemplos de cuándo SÍ: no se sabe el alcance, faltan archivos/entorno, hay 2 enfoques con coste distinto. Cuándo NO: el objetivo dice qué + dónde + done criteria.
 
-## FASE 0 — Clasifica + check-first (siempre, sin comité)
+## FASE 0 — Clasifica (solo `--fast`) + check-first (siempre, sin comité)
 
-> Bypass: si `$ARGUMENTS` contiene `--full` o `--mode=force` → salta clasificación, marca `mode=full`, va directo a FASE 0b con plan seccional completo y `pre_comite` según p_fail (sin vía rápida TRIVIAL). Si no, clasifica normal.
+> **Modo por defecto `full`:** salta clasificación, va directo a FASE 0b con plan seccional completo y `pre_comite` según p_fail (sin vía rápida TRIVIAL). Solo si `$ARGUMENTS` contiene `--fast` se clasifica (TRIVIAL/SMALL/LARGE). Check-first por hash y lección de contexto siguen aplicando en ambos modos.
 
 1. Genera un `slug` de 2-4 palabras (ej: `auth-email`). Todo vive bajo `.opencode/goals/<slug>/` (nunca en raíz, nunca sueltos):
    - `PLAN.md` — plan hipótesis + tabla de pasos
@@ -31,7 +31,7 @@ Tras razonar el objetivo en 30 segundos: si está suficientemente claro (qué ha
    - Regla de aislamiento: solo lees/escribes tu carpeta `<slug>/`. Prohibido leer `LOG.md`/`CONTEXT.md` de otros goals. El check-first solo compara `PLAN.md` + `INDEX.md`, nunca mezcla logs.
    - Migración: si existen `GOAL_*/` o `GOAL_*.md` sueltos en raíz (versión vieja), muévelos a `.opencode/goals/<slug>/` o a `.opencode/goals/archive/<slug>-<fecha>/` al primer uso.
 2. Clasifica según `ENJAMBRE-RULES.md` (calibrado enjambre v1.1, overhead 62k/sesión): **TRIVIAL** (≤500 tok o 1 archivo simple, <30s razonamiento) / **SMALL** (≤10k tok trabajo real, 3-5 archivos simples) / **LARGE** (>10k tok, multi-archivo complejo). El comité vive en FASE 1b y, condicional, en FASE 0b si `pre_comite=true` (p>0.55, conf>0.55; zona gris 0.43-0.55 → `deferred`); nunca en FASE 0 directo.
-   - **TRIVIAL → vía rápida, sin plan:** no crea `PLAN.md` ni `steps/`. Va directo a ejecutar + verificar + tests en FASE 1-fast (ver abajo). Solo deja `.opencode/goals/<slug>/LOG.md` de 3-10 líneas y registra 1 fila en `INDEX.md`. Por qué: cada subagente paga ~62k overhead; en trivial supera 136:1 al trabajo real.
+   - **TRIVIAL (solo con `--fast`) → vía rápida, sin plan:** no crea `PLAN.md` ni `steps/`. Va directo a ejecutar + verificar + tests en FASE 1-fast (ver abajo). Solo deja `.opencode/goals/<slug>/LOG.md` de 3-10 líneas y registra 1 fila en `INDEX.md`. Por qué: cada subagente paga ~62k overhead; en trivial supera 136:1 al trabajo real.
    - SMALL/LARGE → sigue al paso 3.
 2b. Gate find-skills condicional (antes del plan, solo si SMALL/LARGE): si clasificación >=SMALL → ejecuta `goal-discovery --query="$ARGUMENTS" --json --cache-ttl=24h --out=.tmp/find-skills-<hash>.json` stateless con registry_hash + single-flight cache ~/.cache/opencode/find-skills/ (TTL 24h, invalidación por registry_hash), output efímero no muta block.json/STATE, planner lee .tmp/*.json si existe. Si TRIVIAL → skip 0 tok log `skip: trivial`. Si offline o 0 hits → degrada graceful (no bloquea). Coste 800-1500 tok solo en SMALL+.
 3. Check-first: `glob .opencode/goals/*/PLAN.md` + lee `.opencode/goals/INDEX.md`. Si hay match de slug u objetivo similar:
@@ -58,7 +58,7 @@ Usa el agente **`plan` nativo de opencode** (primary `plan`: analiza sin modific
 
 ## FASE 1.R — Auto-research opcional (determinista y acotado)
 
-Controlador externo: `research/controller.md` (no infla SKILL.md). Si `research.enabled=false`, esta fase no existe y coste 0. Si `true`: deep research inicial (3-7 bullets con fuente en `LOG.md ## RESEARCH-INIT`) → comité de arranque mínimo → loop 1.R max 5 ciclos en `.opencode/goals/<slug>/research/YYYY-MM-DD_<slug>/NOTE.md` con `research/INDEX.md` hallable en 2 reads (`INDEX.md` → `NOTE.md`). Cada ciclo = 1 iter del límite global de 15; early-stop si 2 fallos consecutivos (`consecutive_fails >=2`) → invoca FASE 1b (consume 1 de 60). Promoción a `steps/` solo con `delta` replicado x2 + tests no mentirosos. Detalle completo en `research/controller.md`.
+Controlador externo: `research/controller.md` (no infla SKILL.md). Si `research.enabled=false`, esta fase no existe y coste 0. Si `true`: deep research inicial (3-7 bullets con fuente en `LOG.md ## RESEARCH-INIT`) → comité de arranque mínimo → loop 1.R max 5 ciclos en `.opencode/goals/<slug>/research/YYYY-MM-DD-{slug}/NOTE.md` con `research/INDEX.md` hallable en 2 reads (`INDEX.md` → `NOTE.md`). Cada ciclo = 1 iter del límite global de 15; early-stop si 2 fallos consecutivos (`consecutive_fails >=2`) → invoca FASE 1b (consume 1 de 60). Promoción a `steps/` solo con `delta` replicado x2 + tests no mentirosos. Detalle completo en `research/controller.md`.
 
 ## FASE 1 — Runtime soberano (el plan propone, el runtime dispone)
 
@@ -86,26 +86,32 @@ Repite hasta que TODOS los criterios de éxito pasen:
    ```
 7. Si fallo → reintenta 1 vez con enfoque distinto (max 2 intentos por punto). Si tras 2 intentos sigue sin conseguirse → **re-trazo ligero obligatorio (sin comité)**: 1 intento de replanificación acotada (dividir el paso, recortar alcance o cambiar el orden en `PLAN.md` + 1 línea en log) **+ re-estima `p_fail` y `fan-out` + discovery-retry**: si no hubo discovery previo (TRIVIAL skip) o han pasado ≥2 fails, re-ejecuta `goal-discovery --query="$ARGUMENTS + contexto fallo" --json --cache-ttl=24h --out=.tmp/find-skills-retry-<hash>.json` stateless single-flight (TTL 24h, registry_hash) para alimentar comité; coste 800-1500 tok, degrada graceful si 0 hits/offline, no muta block.json/STATE. Gate escalado: si tras re-trazo se cumple 1 de 4 (fan-out>3 archivos, `p_fail>0.55`, ≥2 dominios/research externo, estimación x2) → **escala SMALL→LARGE**. Si re-trazo+gate también falla → incrementa `fails_consecutivos` (+1) y delega a **FASE 1b** según política 2-3-4 (2→standard, 3→PRO, 4→bloqueado). Si hay acierto (verify verde) → `fails_consecutivos=0`.
 
-### Micro-contrato Karpathy 3L (veredicto comité 2026-10-21 — sin burocracia)
-**TRIVIAL** (<5min reversible, 1-2 archivos) → exento, solo Simplicity+Surgical implícitos, sin 3L.
-**No-TRIVIAL sin plan (FASE 1 directa):** antes de codificar deja `[Karpathy-3L] Supuesto: X | Alcance: solo Y no Z | Verify: comando/test` (15-40s). Mapeo: Supuesto=Think Before Coding, Alcance=Simplicity+Surgical, Verify=Goal-Driven. Guarda en `LOG.jsonl` campo `karpathy_contract:{assumption,scope,verify}` (TRIVIAL=null). Linter soft: si files>2 o lines>50 y falta 3L → warning no bloqueante.
+### Karpathy dentro de Goal (4 principios, sin skill externa)
+Fuente canónica: `~/.config/opencode/skills/karpathy-guidelines/SKILL.md` — aquí va el resumen operativo que Goal ejecuta siempre. No necesitas invocar nada extra.
+
+1. **Piensa antes:** di supuestos, opciones y dudas. Si algo es ambiguo, para y pregunta.
+2. **Simple primero:** mínimo código que resuelve lo pedido. Sin extras, sin abstracciones de un uso.
+3. **Quirúrgico:** toca solo lo pedido. Respeta estilo existente. Limpia solo lo que tú dejaste huérfano.
+4. **Con prueba:** define cómo lo verificas antes de programar y verifica después.
+
+Micro-contrato obligatorio (15-40s) en todo paso no-TRIVIAL: deja `[Karpathy-3L] Supuesto: X | Alcance: solo Y no Z | Verify: comando/test`. **TRIVIAL** (<5min, 1-2 archivos) exento pero Simplicity+Surgical implícitos. Guarda en `LOG.jsonl` campo `karpathy_contract:{assumption,scope,verify}` (TRIVIAL=null). Linter soft: si files>2 o lines>50 y falta 3L → warning.
 
 ### FASE 1-fast — Vía rápida TRIVIAL (sin PLAN, sin comité)
 
-Solo para TRIVIAL: ejecuta fix directo, verifica con comando/test, deja `LOG.md` 3-10 líneas (intentado/resultado/error) **y lección obligatoria en `memory/lessons.md`** (tag `coste: alto|medio|bajo` — sin lección = **fuga**). Sin `PLAN.md`, sin `steps/`, sin comité, sin research. Guard: instrumenta `intentos_trivial` en STATE; si 2 fails → `escala TRIVIAL→SMALL` crea `PLAN.md` mini 3 pasos + LOG `escala trivial→small (2 fails)` **+ discovery-retry** `goal-discovery --query` stateless antes de FASE 1b (si TRIVIAL había hecho skip); 3er fail → FASE 1b con contexto retry.
+Solo para TRIVIAL alcanzado con `--fast`: ejecuta fix directo, verifica con comando/test, deja `LOG.md` 3-10 líneas (intentado/resultado/error) **y lección obligatoria en `memory/lessons.md`** (tag `coste: alto|medio|bajo` — sin lección = **fuga**). Sin `PLAN.md`, sin `steps/`, sin comité, sin research. Guard: instrumenta `intentos_trivial` en STATE; si 2 fails → `escala TRIVIAL→SMALL` crea `PLAN.md` mini 3 pasos + LOG `escala trivial→small (2 fails)` **+ discovery-retry** `goal-discovery --query` stateless antes de FASE 1b (si TRIVIAL había hecho skip); 3er fail → FASE 1b con contexto retry.
 
 ### Regla de tests (obligatoria) — robustos, anti-trampas y diagnósticos
 
-**Disparo dual:** se activan **auto** en cada bloque FASE 1 (verify) y **a demanda** con `/goal_test` (default strict). `/goal_test --off --reason="..."` exige motivo y deja traza. Ambos usan mismo `core/checks` — no hay dos lógicas.
+**Disparo dual:** se activan **auto** en cada bloque FASE 1 (verify) y **a demanda** con `/goal_test` (default strict). `/goal_test --off --reason="..."` exige motivo y deja traza. Ambos usan el mismo contrato L0-L3 de `mini-skills/test/SKILL.md` — no hay dos lógicas.
 
 - **L0 Inversión (falsable, bloqueante):** todo test debe **fallar sin el fix y pasar con el fix**. El harness revierte 1 vez el patch y ejecuta. Si pasa en verde → REJECT anti-trampa.
-- **Gate harness_hash (bloqueante):** `research/.harness.lock:harness_hash` y `dataset_hash` deben ser != "" y `proof-of-execution` (archivo en `lab/traces/<hash>.proof` + `metric.json` leído de disco) debe existir. Si vacío o sin proof → REJECT. Goal verifica gate antes de marcar step verde.
+- **Gate harness_hash (bloqueante):** `research/.harness.lock` con `harness_hash` y `dataset_hash` != "" y proof-of-execution en `research/<exp>/traces/<harness_hash>.r1.proof` (`.r2.proof` obligatorio al promover: réplica x2) + `metric.json` leído de disco. Ruta canónica definida en `research/controller.md §Loop 1.R` (Harness hermético) y resuelta con `logger/index.js:validateProof`; nunca se duplica el literal. Si vacío, sin proof, hashes no coinciden o `exit_code != 0` → REJECT. Goal verifica el gate antes de marcar step verde.
 - **L1 Contrato + anti-trampas (bloqueante <2s):** linter AST que bloquea: `assert True`/`expect(1).toBe(1)`, `expect(x).toBeTruthy()` sin valor, mocks que sustituyen la lógica del paso sin `verify`, `skip/todo/xit`, snapshots vacíos, y E2E sin assert sobre estado. `coverage` solo no aprueba.
 - **L2 Propiedad/invariante (bloqueante <30s):** 1 propiedad con fast-check ≥100 casos (idempotencia, round-trip, orden) o 1 happy +1 borde +1 error por unidad. En web/UI: Playwright 1 happy +1 error visible con screenshot; si no aporta, 1 línea de por qué.
 - **L3 Mutación dirigida (condicional):** Stryker solo sobre archivos tocados por el goal, threshold 70% inicial (sube a 80% solo si FP<10% en 20 goals). Bloqueante si `complexity=high` o `risk=core`, informativo si `low`. Métrica `mutation_score` reportada siempre.
 - **Flaky gate:** 3 reruns con seed distinto; si `flaky_rate >5%` → quarantine, no cuenta como verde.
-- **Diagnóstico obligatorio:** todo fail escribe `/.opencode/goals/<slug>/diagnosis/<id>/{trace.json,diff.patch,snapshot}` + entrada `LOG.jsonl` status `fail` con hash encadenado. Sin artefacto el run es inválido. `LOG.md` debe citar `diagnosis/<id>` con causa. Validador `logger/validator` cruza `LOG.jsonl` vs `PLAN.md` dependsOn para detectar orden roto (ver `logger/index.js:validateOrder`).
-- **Frontera borrable vs permanente:** probes en `lab/`, `research/probes/`, `tests/_probe_*/` (TTL 72h, excluidos CI). Invariante: `rm -rf lab/ research/probes/ tests/_probe_*/ ; npm test` sigue verde (`clean-lab.py` + `goal.isolation.test.ts`). Borrable deja línea en `LEDGER.md`.
+- **Diagnóstico obligatorio:** todo fail escribe `/.opencode/goals/<slug>/diagnosis/<id>/{trace.json,diff.patch,snapshot}` + entrada `LOG.jsonl` status `fail` con hash encadenado. Sin artefacto el run es inválido. `LOG.md` debe citar `diagnosis/<id>` con causa. Validador `logger/index.js:validateOrder` cruza `LOG.jsonl` vs `PLAN.md` dependsOn para detectar orden roto.
+- **Frontera borrable vs permanente:** probes en `lab/`, `research/probes/`, `tests/_probe_*/` (TTL 72h, excluidos CI). El proof **nunca** vive en `lab/`: va en `research/<exp>/traces/`. Invariante: `rm -rf lab/ research/probes/ tests/_probe_*/ ; npm test` sigue verde (`clean-lab.py --dry` + drift assert en `logger/test.js`). Borrable deja línea en `LEDGER.md`.
 - **Done del step:** comando exacto + resultado + `hash` + `falsable:true` + `mutation_score` si L3 aplica.
 
 ## FASE 1b — Desbloqueo con escalado por fallos consecutivos (política 2-3-4)
@@ -150,18 +156,16 @@ Fuente: `memory/current.md` (canónica, `memory.md` es espejo). Además, `memory
 
 ## Output final (formato cerrado, obligatorio)
 
-Devuelve EXACTAMENTE estas 4 secciones, en este orden, sin añadir otras. Tono operativo, sin adornos.
+**Techo duro: 60 palabras / 5 líneas.** Es la regla número uno de este agente. Antes de enviar, cuenta las palabras: si pasan de 60, borra hasta que quepan. Si dudas entre dos versiones, envía la corta. Nunca amplíes por "quedar bien".
 
-### 1. Tecnicismo (max 1)
-Una sola línea con el detalle técnico clave de la respuesta (decisión, causa raíz o contrato). Prohibido soltar 2+ tecnicismos aquí. Si hay más, van al resumen o al log, no aquí.
+Tres bloques, en este orden, sin títulos de ingeniero:
 
-### 2. Resumen operativo (max 6 filas)
-Tabla de lo hecho, probado y conseguido. Máximo 6 filas, 1 tecnicismo por fila como mucho:
-`| Hecho | Probado con | Conseguido |`
-Cada fila: qué se hizo → con qué se probó (comando/test exacto) → qué se consiguió (✅/❌). Sin tests reales, la fila es ❌.
+1. **Resumen** (1-2 frases): qué ha pasado y qué significa. Lenguaje de persona normal: cero siglas, rutas, hashes, nombres de archivo o comandos. Traduce todo: "ventanita negra" no "conhost", "ayudante" no "proceso", "abrir escondido" no "CREATE_NO_WINDOW".
+2. **Datos** (solo si hay números, 1 frase): qué dicen y qué conclusión sacas tú. Ej: "revisé 15, 11 vacíos → el problema está en la fuente, no en el código". Un número sin interpretación está prohibido; el usuario no debe traducir nada.
+3. **Siguiente** (1 frase): qué toca ahora, o `fin`.
 
-### 3. Pendientes / ineficiencias (solo si hay)
-Si no hay, escribe `Ninguno` y sigue. Si hay: lista corta de errores pendientes o ineficiencias detectadas (tests flaky, pasos degradados a secuencial, deuda, comité gastado). 1 línea por item, con causa en 5 palabras max.
+Prohibido en la respuesta: tablas, listas de más de 3 ítems, recapitular el plan, anunciar lo que vas a hacer antes de hacerlo, narrar herramientas, repetir el objetivo del usuario, disculpas, cierres motivacionales, y sobre todo jerga técnica sin traducir (ej: "npx -> cmd -> node" o "MCPHidden.exe"). El detalle (comandos, tests, rutas, veredictos, hashes) vive en `LOG.md` y solo se menciona si el usuario dice `detalla`.
 
-### 4. Conclusión (3 líneas exactas)
-Exactamente 3 líneas: línea 1 = estado (conseguido/bloqueado/parcial + por qué en 10 palabras), línea 2 = evidencia más fuerte (comando + resultado), línea 3 = siguiente paso concreto o `fin`.
+Durante la ejecución: 1 línea por paso, tipo "✅ paso 2 hecho y probado". Nada de prosa entre pasos; si algo falla, 1 línea con la causa en llano.
+
+`detalla` en el mensaje del usuario → sube el techo a 15 líneas y tono llano, pero sigues traduciendo cada tecnicismo entre paréntesis. Ejemplo bueno: "Cada ventana abre 8 ayudantes y cada uno te abre una ventanita negra". Ejemplo malo: "npx -> cmd -> node con CREATE_NO_WINDOW".

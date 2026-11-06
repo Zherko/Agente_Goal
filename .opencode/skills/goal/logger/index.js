@@ -65,4 +65,27 @@ function validateOrder(slug, planSteps){
   }
   return {ok:errors.length===0, errors};
 }
-module.exports={append, verify, validateOrder, hashEntry, logPath};
+function proofPath(exp, hash, run=1){
+  if(!exp||!hash) throw new Error('proofPath requiere exp y hash');
+  if(run!==1 && run!==2) throw new Error('run debe ser 1 o 2');
+  return path.posix.join('research', exp, 'traces', `${hash}.r${run}.proof`);
+}
+function validateProof({exp, hash, run=1, lock, root=process.cwd()}){
+  const rel=proofPath(exp,hash,run), abs=path.join(root, rel), errors=[];
+  if(!lock || !lock.harness_hash) errors.push('lock.harness_hash vacio');
+  else if(lock.harness_hash!==hash) errors.push('lock.harness_hash != hash');
+  if(!lock || !lock.dataset_hash) errors.push('lock.dataset_hash vacio');
+  if(!fs.existsSync(abs)) errors.push('proof ausente: '+rel);
+  else {
+    let pr=null;
+    try{ pr=JSON.parse(fs.readFileSync(abs,'utf8')); }catch(e){ errors.push('proof ilegible: '+e.message); }
+    if(pr){
+      if(pr.harness_hash!==hash) errors.push('proof.harness_hash != hash');
+      if(lock && pr.dataset_hash!==lock.dataset_hash) errors.push('proof.dataset_hash != lock');
+      if(pr.exit_code!==0) errors.push('proof.exit_code != 0');
+      if(pr.run_id==null) errors.push('proof.run_id ausente');
+    }
+  }
+  return {ok:errors.length===0, errors, path:rel};
+}
+module.exports={append, verify, validateOrder, proofPath, validateProof, hashEntry, logPath};

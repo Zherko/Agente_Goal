@@ -16,7 +16,7 @@ descubrimiento caro y escaso. Este README es la constitución; el agente `goal` 
 1. **Repetición:** mismo patrón registrado ≥2 veces en `lessons.md` → candidata.
 2. **Fallo+comité+fix:** falla 2 veces en mismo paso → FASE 1b comité con deep research → si resuelve → candidata anti-patrones con la lección.
 
-La candidata vive primero en `research/YYYY-MM-DD_<slug>__mXX/NOTE.md`. **Nunca crea skill sin veredicto.**
+La candidata vive primero en `research/YYYY-MM-DD-{slug}/NOTE.md`. **Nunca crea skill sin veredicto.**
 
 ## 3. Promoción al registro — umbral ADAPTATIVO por coste
 
@@ -67,5 +67,5 @@ auditor independiente PASS + **spike borrable trazado en LEDGER.md con TTL 72h**
 
 ## 8. Frontera borrable (ver SKILL.md Regla de tests + FASE 1-auto)
 
-- Borrable TTL 72h: `lab/`, `research/probes/`, `tests/_probe_*/` — ver `LEDGER.md` (1 linea por spike) + `clean-lab.py` (borra >72h + reporta hit-rate) + invariante `goal.isolation.test.ts` (`rm -rf borrables; npm test` verde).
+- Borrable TTL 72h: `lab/`, `research/probes/`, `tests/_probe_*/` - ver `LEDGER.md` (1 linea por spike) + `clean-lab.py` (borra >72h + reporta hit-rate) + invariante `rm -rf borrables; npm test` verde (drift assert en `logger/test.js`).
 - Permanente: `tests/` contrato, `STATE.json` + `STATE.snapshot.json`, `docs/adr/`.
