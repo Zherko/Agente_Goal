@@ -140,13 +140,27 @@ El aprendizaje no vive en el contexto del agente: vive en disco y se lee antes d
 
 El número no es una sugerencia: se cuenta en disco y manda.
 
-- **Qué es un ciclo:** hipótesis escrita + parche aplicado + harness ejecutado + `metric.json` + fila en `_index.md` + `LEARNINGS.md`/`ROADMAP.md` actualizados. Leer, pensar o tocar un archivo **no** es un ciclo.
+- **Qué es un ciclo:** hipótesis escrita + parche aplicado + harness ejecutado + `metric.json` + fila en `_index.md` + `LEARNINGS.md`/`ROADMAP.md` actualizados **siempre, también si falla**. Leer, pensar o tocar un archivo **no** es un ciclo.
 - **Registro:** `research/cycles.jsonl`, una línea por ciclo cerrado `{n, fecha, experimento, metric, delta, harness_hash}`. Es la única fuente para contar; si no hay línea, el ciclo no existe.
 - **Cuota mínima antes de parar:** `/goal-research` = 5 ciclos · `/goal-autoresearch` = **15 ciclos**. Presupuesto máximo 20.
 - **Parada legítima (solo tres):** objetivo alcanzado con réplica x2 · 10 comités seguidos · cuota agotada.
 - **Prohibido parar** por «creo que ya está», por tiempo, por tokens o por cansancio. Si el agente cree que debe parar antes, escribe `## PARADA PROPUESTA` con motivo en `NOTE.md` y **sigue igualmente**.
 - **Cierre:** con `ciclos < cuota` y sin objetivo, el estado es `bloqueado`, nunca `fin`.
 - **Tablero:** muestra `ciclos N/cuota` en la investigación.
+
+## Aprendizaje y autocompact durante la investigación
+
+**Aprendizaje obligatorio, gane o pierda.** Cada prueba completada deja su línea en `research/LEARNINGS.md` **antes** de pasar a la siguiente: `fecha · experimento · veredicto · qué se aprendió · pista`. Un fallo sin aprendizaje escrito es una prueba inválida (no cuenta en `cycles.jsonl`). Lo negativo se guarda igual que lo positivo: saber qué no funciona es parte del resultado.
+
+**Autocompact cuando toca, no a mitad de prueba.**
+
+- **Disparo:** solo al cerrar una prueba completa (harness ejecutado + `metric.json` + `LEARNINGS.md`/`ROADMAP.md` escritos + línea en `cycles.jsonl`) **y** si el contexto supera **250k tokens**.
+- **Nunca** a mitad de ciclo, con parche aplicado sin medir, o con un comité abierto.
+- **Qué se guarda antes de compactar (pin, no se pierde):** `objective.lock.json`, `LEARNINGS.md`, `ROADMAP.md`, `CHANGE_SPACE.md`, `VERSIONS.md` + `BEST.md`, y el último `NOTE.md`. Eso se reinyecta tal cual después.
+- **Qué se resume:** solo la charla y las trazas de las pruebas ya cerradas; las decisiones y los bloqueos se conservan literales.
+- **Validación:** si el resumen no conserva objetivo + estado + siguiente hipótesis, se aborta y se sigue sin compactar.
+- **Registro:** `LOG.md` anota `compact: si/no (contexto Xk, ciclo N)`.
+- **Tablero:** no cambia; todo lo que importa ya está en disco.
 
 ## Memoria (canónica en proyecto, no en Goal)
 
